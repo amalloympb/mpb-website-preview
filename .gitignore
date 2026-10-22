@@ -1,0 +1,10 @@
+# Secrets and runtime data (leads, holds, geocode cache)
+server/.env
+server/data/
+.env
+node_modules/
+
+# Not part of the published repo: old design drafts, feed fetch cache, local build output
+archive/
+feed/cache.json
+_site/
