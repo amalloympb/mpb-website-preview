@@ -85,6 +85,7 @@
           <li><svg class="ic"><use href="#i-shield"/></svg>Compliance and deposit protection handled</li>
           <li><svg class="ic"><use href="#i-users"/></svg>HMO and student let specialists</li>
         </ul>
+        <p class="lp-alt">Not ready to talk? <a href="#health">Take the free compliance check <svg class="ic"><use href="#i-arrow"/></svg></a></p>
         <div class="lp-mini">
           <span>Accredited &amp; protected</span>
           <img src="https://www.mypropertybox.co.uk/images/cmp-logo.png" alt="Client Money Protect" height="40">
@@ -95,6 +96,7 @@
 
       <form class="wz lp-card" id="get-started" data-intent="manage" data-source="landing-landlords" novalidate aria-label="Free management review request">
         <input type="hidden" name="intent" value="manage">
+        <input type="hidden" name="service_interest" value="">
         <div class="wz-top"><span data-step-txt>Step 1 of 2</span><div class="wz-progress"><i data-bar></i></div></div>
 
         <div class="wz-pane" data-step="1">
@@ -179,7 +181,53 @@
     </div>
   </section>
 
-  <section class="section alt" id="how" aria-labelledby="how-title">
+  <section class="section alt" id="compare" aria-labelledby="cmp-title">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">Choose your service</p>
+        <h2 id="cmp-title">As hands-on as you <em>want to be.</em></h2>
+        <p class="sub">Three ways to let with us. Each one builds on the one before, so you can choose the level of help you need.</p>
+      </header>
+      <div class="lp-tiers">
+        <article class="lp-tier">
+          <p class="tag">Let only</p>
+          <h3>Find the right tenant</h3>
+          <p class="tier-sub">We find and check your tenant, then you take it from there.</p>
+          <ul class="tier-list">
+            <li><svg class="ic"><use href="#i-check"/></svg>Marketing and viewings</li>
+            <li><svg class="ic"><use href="#i-check"/></svg>Tenant referencing and right to rent checks</li>
+            <li><svg class="ic"><use href="#i-check"/></svg>Tenancy agreement and move-in paperwork</li>
+          </ul>
+          <a class="btn btn-line" href="#get-started" data-fill="service_interest=let-only&amp;src=compare">Ask about let only</a>
+        </article>
+        <article class="lp-tier">
+          <p class="tag">Rent collection</p>
+          <h3>We handle the money</h3>
+          <p class="tier-sub">Everything in let only, plus:</p>
+          <ul class="tier-list">
+            <li><svg class="ic"><use href="#i-check"/></svg>Rent collected on your behalf</li>
+            <li><svg class="ic"><use href="#i-check"/></svg>You stay in charge of repairs and day-to-day tenant contact</li>
+          </ul>
+          <a class="btn btn-line" href="#get-started" data-fill="service_interest=rent-collection&amp;src=compare">Ask about rent collection</a>
+        </article>
+        <article class="lp-tier hl">
+          <p class="tag">Fully managed</p>
+          <h3>Properly hands-off</h3>
+          <p class="tier-sub">Everything in rent collection, plus:</p>
+          <ul class="tier-list">
+            <li><svg class="ic"><use href="#i-check"/></svg>Tenant communication handled for you</li>
+            <li><svg class="ic"><use href="#i-check"/></svg>Repairs reported, managed and completed</li>
+            <li><svg class="ic"><use href="#i-check"/></svg>Property inspections</li>
+            <li><svg class="ic"><use href="#i-check"/></svg>Compliance and deposit protection kept on track</li>
+          </ul>
+          <a class="btn btn-navy" href="#get-started" data-fill="service_interest=fully-managed&amp;src=compare">Ask about full management</a>
+        </article>
+      </div>
+      <p class="lp-tier-note">What is included, and the fee, depends on your property and is confirmed in your free management review. There is no obligation.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how" aria-labelledby="how-title">
     <div class="wrap lp-process">
       <header class="sec-head">
         <p class="kicker">How it works</p>
@@ -192,6 +240,96 @@
         <li><span class="n">02</span><h3>Choose your service</h3><p>Let-only, rent collection or full management. You decide how hands-on you want to be.</p></li>
         <li><span class="n">03</span><h3>We take it from there</h3><p>Compliance, maintenance and communication handled, with you kept informed.</p></li>
       </ol>
+    </div>
+  </section>
+
+  <section class="section hc" id="health" aria-labelledby="hc-title">
+    <div class="wrap hc-grid">
+      <div class="hc-copy">
+        <p class="kicker">Free compliance check</p>
+        <h2 id="hc-title">Is your rental <em>compliant?</em></h2>
+        <p>Answer seven quick questions and get a personal checklist of what to look at first. It takes about two minutes and is free.</p>
+        <ul class="wz-pts">
+          <li><svg class="ic"><use href="#i-shield"/></svg>Gas safety, electrics and EPC</li>
+          <li><svg class="ic"><use href="#i-bolt"/></svg>Smoke and carbon monoxide alarms</li>
+          <li><svg class="ic"><use href="#i-key"/></svg>Deposit protection and right to rent</li>
+          <li><svg class="ic"><use href="#i-pin"/></svg>Licensing for HMOs and selective areas</li>
+        </ul>
+      </div>
+
+      <form class="wz lp-card hc-card" id="health-form" data-source="landlords-compliance-check" novalidate aria-label="Landlord compliance check">
+        <div class="wz-top"><span data-step-txt>Step 1 of 2</span><div class="wz-progress"><i data-bar></i></div></div>
+
+        <div class="wz-pane" data-step="1">
+          <h3 tabindex="-1">Your rental at a glance</h3>
+          <p class="wz-sub">Pick the best answer for each one. <span data-count aria-live="polite">0 of 7 answered</span></p>
+          <div class="hc-qs" data-qs></div>
+        </div>
+
+        <div class="wz-pane" data-step="2" hidden>
+          <h3 tabindex="-1">Where should we send your results?</h3>
+          <p class="wz-sub">Add your details to see your personal checklist straight away.</p>
+          <div class="fgrid">
+            <label class="fld full"><span class="lbl">Full name</span><span class="inp"><input type="text" name="name" autocomplete="name" required data-msg="Please enter your name."></span></label>
+            <label class="fld"><span class="lbl">Email</span><span class="inp"><input type="email" name="email" autocomplete="email" inputmode="email" required data-v="email" data-msg="Please enter your email address."></span></label>
+            <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="Please enter a phone number so we can talk you through it."></span></label>
+            <label class="fld full"><span class="lbl">Property postcode or town</span><span class="inp"><input type="text" name="location" placeholder="e.g. DL1 5NA or Kendal" autocomplete="off" required data-msg="Please tell us where the property is."></span></label>
+          </div>
+          <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box to confirm you're happy for us to contact you."><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box contacting me about my compliance check and our landlord services. My details will be used as set out in the <a href="https://www.mypropertybox.co.uk/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
+          <label class="ck"><input type="checkbox" name="marketing" value="yes"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>Send me occasional landlord tips and compliance updates. <em>(Optional)</em></small></span></label>
+          <input type="text" name="company_website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        </div>
+
+        <p class="wz-err" data-err role="alert"></p>
+        <div class="wz-nav">
+          <button type="button" class="wz-back" data-back hidden><svg class="ic"><use href="#i-arrow"/></svg> Back</button>
+          <button type="submit" class="btn btn-navy" data-next><span data-next-txt>Continue</span><svg class="ic"><use href="#i-arrow"/></svg></button>
+        </div>
+        <p class="lp-trust"><svg class="ic"><use href="#i-shield"/></svg> Free &middot; No obligation &middot; Your details stay private</p>
+
+        <div class="wz-done hc-res" data-done tabindex="-1" hidden>
+          <div class="hc-top">
+            <div class="hc-score" aria-hidden="true"><b data-score>0</b><span>of 7</span></div>
+            <div>
+              <h3 data-res-title>Your results</h3>
+              <p data-res-msg></p>
+            </div>
+          </div>
+          <div data-todo-wrap>
+            <h4 class="hc-h">Look at these first</h4>
+            <ul class="hc-todo" data-todo></ul>
+          </div>
+          <div data-ok-wrap>
+            <h4 class="hc-h">Already in place</h4>
+            <ul class="hc-ok" data-ok></ul>
+          </div>
+          <p class="hc-disc">This is general guidance on common requirements for landlords in England, not legal advice. Requirements depend on the property and change over time, so always check the current rules or speak to an expert.</p>
+          <p class="wz-preview" data-preview hidden>Preview mode: no lead destination is connected yet, so your details were not sent.</p>
+          <div class="row">
+            <a class="btn btn-navy" href="#get-started" data-fill="src=health">Book my free management review</a>
+            <button type="button" class="btn btn-line" data-call>Call your local office</button>
+          </div>
+          <button type="button" class="hc-redo" data-redo>Retake the check</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="section alt" id="switch" aria-labelledby="sw-title">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">Switching agent</p>
+        <h2 id="sw-title">Already with an agent? <em>Switching is simple.</em></h2>
+        <p class="sub">Moving your property to us does not have to be a headache. Here is how we handle it.</p>
+      </header>
+      <div class="lp-benefits four">
+        <article><svg class="ic"><use href="#i-search"/></svg><h3>Check your terms</h3><p>Look at the notice period and any fees in your current agreement. We can talk you through what to look for.</p></article>
+        <article><svg class="ic"><use href="#i-cal"/></svg><h3>Agree a handover date</h3><p>We plan the move around your notice period so there is no gap in how your property is looked after.</p></article>
+        <article><svg class="ic"><use href="#i-check"/></svg><h3>We move the paperwork</h3><p>Tenancy agreement, safety certificates, inventory and deposit details are brought across with your current agent.</p></article>
+        <article><svg class="ic"><use href="#i-users"/></svg><h3>We introduce ourselves</h3><p>Your tenants are told who we are, where to pay rent and how to report a repair.</p></article>
+      </div>
+      <div class="row"><a class="btn btn-navy" href="#get-started" data-fill="managed_by=agent&amp;src=switch">Talk to us about switching</a></div>
+      <p class="lp-tier-note">Leaving terms differ between agents, so check yours first. We are happy to look at it with you.</p>
     </div>
   </section>
 
@@ -313,6 +451,7 @@
 
 <script src="common.js"></script>
 <script src="landing.js"></script>
+<script src="health.js"></script>
 <script src="nudge.js"></script>
 </body>
 </html>

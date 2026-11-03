@@ -100,6 +100,18 @@ const prefill = (loc, src) => {
   setTimeout(() => (loc && step === 0 ? $('select, input:not([type=hidden])', panes[0]) : locEl).focus({ preventScroll: true }), 450);
 };
 $$('[data-area]').forEach(b => b.addEventListener('click', () => { locEl.value = b.dataset.area; syncCover(); toForm(); setTimeout(() => locEl.focus({ preventScroll: true }), 450); }));
+// [data-fill="field=value&src=tag"] links pre-select a field in the main form and tag the lead source
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-fill]');
+  if (!a) return;
+  const q = new URLSearchParams(a.dataset.fill);
+  q.forEach((v, k) => {
+    if (k === 'src') { if (/^[a-z0-9_-]{1,24}$/.test(v)) form.dataset.source = form.dataset.source.split(':')[0] + ':' + v; return; }
+    const f = form.elements[k];
+    if (f && !f.disabled) f.value = v;
+  });
+  track('mpb_fill_cta', { fill: a.dataset.fill, source });
+});
 document.addEventListener('mpb:prefill', e => prefill(e.detail && e.detail.loc, e.detail && e.detail.src));
 {
   const q = new URLSearchParams(location.search), loc = q.get('loc'), src = (q.get('src') || '').toLowerCase();
@@ -110,7 +122,7 @@ show(0, false);
 syncCover();
 
 // One rAF-throttled scroll handler: nav, progress bar and the floating call to action
-const cta = $('.lp-cta');
+const cta = $('.lp-cta'), hc = $('.hc');
 const inView = (el, vh) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < vh; };
 let ticking = false;
 const onScroll = () => {
@@ -118,7 +130,7 @@ const onScroll = () => {
   const y = scrollY, vh = innerHeight, max = document.documentElement.scrollHeight - vh;
   nav.classList.toggle('solid', y > 30);
   progress.style.transform = `scaleX(${max > 0 ? Math.min(y / max, 1) : 0})`;
-  fab.classList.toggle('show', y > vh * 0.7 && !inView(form, vh) && !(cta && inView(cta, vh)) && !form.classList.contains('is-done'));
+  fab.classList.toggle('show', y > vh * 0.7 && !inView(form, vh) && !(cta && inView(cta, vh)) && !(hc && inView(hc, vh)) && !form.classList.contains('is-done'));
 };
 const requestScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } };
 onScroll();
@@ -126,7 +138,7 @@ addEventListener('scroll', requestScroll, { passive: true });
 addEventListener('resize', requestScroll);
 
 // Scroll reveals with a small stagger inside grids
-const targets = $$('.sec-head, .lp-benefits article, .steps li, .lp-magnet, .lp-faq details, .lp-areas, .lp-areas-note, .stats-grid > div, .creds');
+const targets = $$('.sec-head, .lp-benefits article, .lp-tier, .lp-tier-note, .hc-copy, .steps li, .lp-magnet, .lp-faq details, .lp-areas, .lp-areas-note, .stats-grid > div, .creds');
 targets.forEach(el => {
   el.classList.add('reveal');
   const sibs = [...el.parentElement.children].filter(c => targets.includes(c));
