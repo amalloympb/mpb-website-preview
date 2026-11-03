@@ -127,6 +127,48 @@ const ctaBand = (h2, p, primary, second) => `  <section class="cta lp-cta tn-qui
     </div>
   </section>`;
 
+// ---- Lead form shared by town and service pages (behaviour lives in town.js) ----
+const leadForm = o => `      <form class="wz lp-card" id="get-started" data-source="${o.source}"${o.town ? ` data-town="${esc(o.town)}"` : ''}${o.office ? ` data-office="${esc(o.office)}"` : ''} novalidate aria-label="${esc(o.label)}">
+        <div class="wz-pane">
+          <h3 tabindex="-1">${esc(o.heading)}</h3>
+          <p class="wz-sub">${esc(o.sub)}</p>
+          <div class="fgrid">
+            ${o.intent}
+            <label class="fld full"><span class="lbl">Property postcode or town</span><span class="inp"><input type="text" name="location" value="${esc(o.location || '')}" placeholder="e.g. DL1 5NA" autocomplete="off" required data-msg="Please tell us where the property is."></span><span class="hint wz-cover" data-cover aria-live="polite"></span></label>
+            <label class="fld full"><span class="lbl">Full name</span><span class="inp"><input type="text" name="name" autocomplete="name" required data-msg="Please enter your name."></span></label>
+            <label class="fld"><span class="lbl">Email</span><span class="inp"><input type="email" name="email" autocomplete="email" inputmode="email" required data-v="email" data-msg="Please enter your email address."></span></label>
+            <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="Please enter a phone number so we can arrange your visit."></span></label>
+            <div class="fld full"><span class="lbl">Best way to reach you</span>
+              <div class="chips chips-sm" role="radiogroup" aria-label="Preferred contact method">
+                <label class="chip"><input type="radio" name="contact_pref" value="phone" checked><span>Phone</span></label>
+                <label class="chip"><input type="radio" name="contact_pref" value="email"><span>Email</span></label>
+                <label class="chip"><input type="radio" name="contact_pref" value="text"><span>Text message</span></label>
+              </div>
+            </div>
+          </div>
+          <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box to confirm you're happy for us to contact you."><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box contacting me about this request. My details will be used as set out in the <a href="https://www.mypropertybox.co.uk/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
+          <label class="ck"><input type="checkbox" name="marketing" value="yes"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>Send me occasional property market updates. <em>(Optional)</em></small></span></label>
+          <input type="text" name="company_website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        </div>
+
+        <p class="wz-err" data-err role="alert"></p>
+        <div class="wz-nav">
+          <button type="submit" class="btn btn-navy" data-next><span data-next-txt>${esc(o.cta)}</span><svg class="ic"><use href="#i-arrow"/></svg></button>
+        </div>
+        <p class="lp-trust"><svg class="ic"><use href="#i-shield"/></svg> Free &middot; No obligation &middot; Your details stay private</p>
+        <p class="call-note">Prefer to talk? ${o.call}</p>
+
+        <div class="wz-done" data-done tabindex="-1" hidden>
+          <span class="done-ic"><svg class="ic"><use href="#i-check"/></svg></span>
+          <h3 data-done-title>Thank you</h3>
+          <p data-done-msg></p>
+          <p class="wz-preview" data-preview hidden>Preview mode: no lead destination is connected yet, so this request was not sent.</p>
+          <div class="row">
+            ${o.done}
+          </div>
+        </div>
+      </form>`;
+
 // ---- Town and area pages ----
 const faqs = (p, o) => [
   [`Do you cover ${p.name}?`, p.office === p.slug
@@ -177,52 +219,23 @@ const townPage = p => {
         ${MINI}
       </div>
 
-      <form class="wz lp-card" id="get-started" data-source="${src}" data-town="${esc(p.name)}" data-office="${esc(o.name)}" novalidate aria-label="Free valuation request for ${esc(p.name)}">
-        <div class="wz-pane">
-          <h3 tabindex="-1">Free valuation in ${esc(p.name)}</h3>
-          <p class="wz-sub">Selling or letting? Tell us where to reach you and a local expert will be in touch.</p>
-          <div class="fgrid">
-            <div class="fld full"><span class="lbl">I want to</span>
+${leadForm({
+    source: src, town: p.name, office: o.name,
+    label: `Free valuation request for ${p.name}`,
+    heading: `Free valuation in ${p.name}`,
+    sub: 'Selling or letting? Tell us where to reach you and a local expert will be in touch.',
+    intent: `<div class="fld full"><span class="lbl">I want to</span>
               <div class="chips chips-sm" role="radiogroup" aria-label="Sell or let">
                 <label class="chip"><input type="radio" name="intent" value="sell" checked><span>Sell my home</span></label>
                 <label class="chip"><input type="radio" name="intent" value="let"><span>Let my property</span></label>
               </div>
-            </div>
-            <label class="fld full"><span class="lbl">Property postcode or town</span><span class="inp"><input type="text" name="location" value="${esc(p.name)}" placeholder="e.g. DL1 5NA" autocomplete="off" required data-msg="Please tell us where the property is."></span><span class="hint wz-cover" data-cover aria-live="polite"></span></label>
-            <label class="fld full"><span class="lbl">Full name</span><span class="inp"><input type="text" name="name" autocomplete="name" required data-msg="Please enter your name."></span></label>
-            <label class="fld"><span class="lbl">Email</span><span class="inp"><input type="email" name="email" autocomplete="email" inputmode="email" required data-v="email" data-msg="Please enter your email address."></span></label>
-            <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="Please enter a phone number so we can arrange your visit."></span></label>
-            <div class="fld full"><span class="lbl">Best way to reach you</span>
-              <div class="chips chips-sm" role="radiogroup" aria-label="Preferred contact method">
-                <label class="chip"><input type="radio" name="contact_pref" value="phone" checked><span>Phone</span></label>
-                <label class="chip"><input type="radio" name="contact_pref" value="email"><span>Email</span></label>
-                <label class="chip"><input type="radio" name="contact_pref" value="text"><span>Text message</span></label>
-              </div>
-            </div>
-          </div>
-          <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box to confirm you're happy for us to contact you."><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box contacting me about this request. My details will be used as set out in the <a href="https://www.mypropertybox.co.uk/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
-          <label class="ck"><input type="checkbox" name="marketing" value="yes"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>Send me occasional property market updates. <em>(Optional)</em></small></span></label>
-          <input type="text" name="company_website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-        </div>
-
-        <p class="wz-err" data-err role="alert"></p>
-        <div class="wz-nav">
-          <button type="submit" class="btn btn-navy" data-next><span data-next-txt>Get my free valuation</span><svg class="ic"><use href="#i-arrow"/></svg></button>
-        </div>
-        <p class="lp-trust"><svg class="ic"><use href="#i-shield"/></svg> Free &middot; No obligation &middot; Your details stay private</p>
-        <p class="call-note">Prefer to talk? <button type="button" data-call="${o.id}">Call ${esc(o.name)} on ${o.phone}</button></p>
-
-        <div class="wz-done" data-done tabindex="-1" hidden>
-          <span class="done-ic"><svg class="ic"><use href="#i-check"/></svg></span>
-          <h3 data-done-title>Thank you</h3>
-          <p data-done-msg></p>
-          <p class="wz-preview" data-preview hidden>Preview mode: no lead destination is connected yet, so this request was not sent.</p>
-          <div class="row">
-            <a class="btn btn-navy" href="properties.html?section=sales&amp;q=${encodeURIComponent(q)}">Homes for sale in ${esc(p.name)}</a>
-            <a class="btn btn-line" href="properties.html?section=lets&amp;q=${encodeURIComponent(q)}">Properties to let</a>
-          </div>
-        </div>
-      </form>
+            </div>`,
+    location: p.name,
+    cta: 'Get my free valuation',
+    call: `<button type="button" data-call="${o.id}">Call ${esc(o.name)} on ${o.phone}</button>`,
+    done: `<a class="btn btn-navy" href="properties.html?section=sales&amp;q=${encodeURIComponent(q)}">Homes for sale in ${esc(p.name)}</a>
+            <a class="btn btn-line" href="properties.html?section=lets&amp;q=${encodeURIComponent(q)}">Properties to let</a>`
+  })}
     </div>
   </section>
 
@@ -389,6 +402,219 @@ ${ctaBand('Not sure which office is <em>yours?</em>', 'Tell us where your proper
   return html.replace(/href="#get-started"/g, 'href="index.html#valuation"');
 };
 
+// ---- HMO and student pages (landlord lead capture) ----
+const GENERAL = 'General guidance for landlords in England, not legal advice. Check the rules that apply to your property with your local council or a qualified adviser.';
+const faqLd = faq => ({
+  '@context': 'https://schema.org', '@type': 'FAQPage',
+  mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } }))
+});
+const benefit = ([ic, h, p, link]) => `<article><svg class="ic"><use href="#i-${ic}"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p>${link ? `<a class="more" href="${link[0]}">${esc(link[1])} <svg class="ic"><use href="#i-arrow"/></svg></a>` : ''}</article>`;
+
+const servicePage = c => head({ title: c.title, desc: c.desc, file: c.file, ld: [faqLd(c.faq)] }) + `
+<main id="main">
+
+  <section class="hero lp-hero" id="start">
+    ${HERO_IMG}
+    <div class="wrap hero-inner lp-grid">
+      <div class="lp-copy">
+        <p class="eyebrow">${c.eyebrow}</p>
+        <h1>${c.h1}</h1>
+        <p class="lead">${esc(c.lead)}</p>
+        <ul class="lp-pts">
+          ${c.pts.map(([ic, t]) => `<li><svg class="ic"><use href="#i-${ic}"/></svg>${t}</li>`).join('\n          ')}
+        </ul>
+        ${MINI}
+      </div>
+
+${leadForm(c.form)}
+    </div>
+  </section>
+${c.live || ''}
+  <section class="section" id="info" aria-labelledby="info-title">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">${esc(c.info.kicker)}</p>
+        <h2 id="info-title">${c.info.h2}</h2>
+        <p class="sub">${esc(c.info.sub)}</p>
+      </header>
+      <div class="lp-benefits">
+        ${c.info.cards.map(benefit).join('\n        ')}
+      </div>
+      <p class="lp-tier-note">${esc(GENERAL)}</p>
+    </div>
+  </section>
+
+  <section class="section alt" aria-label="Free appraisal">
+    <div class="wrap">
+      <div class="lp-magnet">
+        <div>
+          <p class="kicker">${esc(c.magnet.kicker)}</p>
+          <h2>${c.magnet.h2}</h2>
+          <p>${esc(c.magnet.p)}</p>
+        </div>
+        <div class="row">
+          <a class="btn btn-mint" href="#get-started">${esc(c.magnet.cta)}</a>
+          <a class="btn btn-ghost" href="${c.magnet.second[0]}">${esc(c.magnet.second[1])}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+${c.more ? `
+  <section class="section" id="more" aria-labelledby="more-title">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">${esc(c.more.kicker)}</p>
+        <h2 id="more-title">${c.more.h2}</h2>
+        <p class="sub">${esc(c.more.sub)}</p>
+      </header>
+      <div class="lp-benefits">
+        ${c.more.cards.map(benefit).join('\n        ')}
+      </div>
+    </div>
+  </section>
+` : ''}
+  <section class="section${c.more ? ' alt' : ''}" id="faq" aria-labelledby="faq-title">
+    <div class="wrap lp-faq-wrap">
+      <header class="sec-head">
+        <p class="kicker">Questions</p>
+        <h2 id="faq-title">Before you <em>decide.</em></h2>
+        <p class="sub">${esc(c.faqSub)}</p>
+      </header>
+      <div>
+        <div class="lp-faq">
+          ${c.faq.map(([qn, a]) => `<details><summary>${esc(qn)}</summary><p>${esc(a)}</p></details>`).join('\n          ')}
+        </div>
+      </div>
+    </div>
+  </section>
+
+${ctaBand(c.cta.h2, c.cta.p, c.cta.primary, c.cta.second)}
+</main>
+` + tail('#get-started');
+
+const CALL_US = '<button type="button" data-call>Call your local office</button>';
+const hiddenIntent = v => `<input type="hidden" name="intent" value="${v}">`;
+
+const SERVICE_PAGES = [
+  {
+    file: 'hmo.html',
+    title: 'HMO Landlords | Lettings & Management | My Property Box',
+    desc: 'Letting or managing an HMO or multi-let property in the North East, North Yorkshire or Cumbria? Get a free management review from My Property Box.',
+    eyebrow: 'HMO &amp; multi-let landlords',
+    h1: 'Lettings and management for <em>HMO landlords.</em>',
+    lead: 'Shared houses and multi-let properties come with more rules and more to manage. Tell us about your property and a local expert will talk through your options.',
+    pts: [
+      ['check', 'Free, no-obligation management review'],
+      ['pin', 'Local teams across the North East, North Yorkshire and Cumbria'],
+      ['shield', '<a href="landlords.html#health">Free guided compliance check for landlords</a>']
+    ],
+    form: {
+      source: 'hmo', label: 'Free HMO management review request', heading: 'Free HMO management review',
+      sub: 'Tell us about your property and where to reach you. A local expert will be in touch.',
+      intent: hiddenIntent('manage'), cta: 'Get my free management review', call: CALL_US,
+      done: '<a class="btn btn-navy" href="landlords.html">Landlord services</a>\n            <a class="btn btn-line" href="landlords.html#health">Free compliance check</a>'
+    },
+    info: {
+      kicker: 'HMO essentials', h2: 'The essentials, <em>at a glance.</em>',
+      sub: 'Requirements depend on your property and your council, so always check the details that apply to you.',
+      cards: [
+        ['key', 'Licensing', 'Larger HMOs need a mandatory licence, and many councils also run additional or selective licensing schemes. Rules differ by council, so check yours before you let.'],
+        ['bolt', 'Fire safety', 'Working smoke and heat alarms, clear escape routes and, in many HMOs, fire doors and emergency lighting. A fire risk assessment is a sensible starting point.'],
+        ['shield', 'Gas and electrical safety', 'A gas safety certificate every year where there is a gas supply, and an electrical installation condition report at least every five years.'],
+        ['home', 'Room sizes and facilities', 'Minimum bedroom sizes, plus enough kitchens, bathrooms and toilets for the number of people living there.'],
+        ['check', 'Management duties', 'HMO managers have extra duties, including keeping shared areas clean and safe, maintaining facilities and giving tenants an emergency contact.'],
+        ['pin', 'Tenancies and deposits', 'Protect deposits in a government-approved scheme, give the prescribed information, and carry out right to rent checks.']
+      ]
+    },
+    magnet: {
+      kicker: 'Own an HMO?', h2: 'Let us take a look at <em>your property.</em>',
+      p: 'A free, no-obligation management review from your local team. It takes about a minute to ask.',
+      cta: 'Get my free review', second: ['landlords.html#health', 'Free compliance check']
+    },
+    more: {
+      kicker: 'How we help', h2: 'Support for <em>landlords.</em>', sub: 'Everything for landlords in one place.',
+      cards: [
+        ['key', 'Landlord services', 'Compare our landlord services and see how switching agents works.', ['landlords.html', 'Landlord services']],
+        ['shield', 'Free compliance check', 'Work through our guided checklist and see where your rental stands.', ['landlords.html#health', 'Start the check']],
+        ['pin', 'Your local office', 'Find your nearest office and speak to the team that covers your area.', ['areas.html', 'Areas we cover']]
+      ]
+    },
+    faqSub: 'Straight answers to what HMO landlords ask us most.',
+    faq: [
+      ['What is an HMO?', 'In England, a house in multiple occupation (HMO) is generally a property let to three or more people who are not from the same household and who share facilities such as a kitchen or bathroom.'],
+      ['Do I need a licence for my HMO?', 'Larger HMOs, generally those let to five or more people from more than one household, need a mandatory licence. Many councils also require licences for smaller HMOs. Check with your local council.'],
+      ['Is the management review really free?', 'Yes. Your management review is free and there is no obligation to instruct us afterwards.'],
+      ['Is this legal advice?', GENERAL]
+    ],
+    cta: {
+      h2: 'Ready to talk about your <em>HMO?</em>', p: 'Free, no-obligation, and handled by your local team.',
+      primary: '<a class="btn btn-mint" href="#get-started">Get my free review</a>',
+      second: '<button type="button" class="btn btn-ghost" data-call>Call us</button>'
+    }
+  },
+  {
+    file: 'student.html',
+    title: 'Student Lets | Student Properties & Landlord Appraisals | My Property Box',
+    desc: 'Browse current student properties, or get a free rental appraisal for your student let from My Property Box.',
+    eyebrow: 'Student lets',
+    h1: 'Student lets, <em>made simple.</em>',
+    lead: 'Looking for a student home, or letting a property to students? Browse our current student properties, or tell us about yours for a free rental appraisal.',
+    pts: [
+      ['home', 'Browse current student properties, with rent shown per person per week'],
+      ['check', 'Free, no-obligation rental appraisal for landlords'],
+      ['pin', 'Local teams across the North East, North Yorkshire and Cumbria']
+    ],
+    form: {
+      source: 'student', label: 'Free student-let rental appraisal request', heading: 'Free student-let appraisal',
+      sub: 'Landlords: tell us about your property and where to reach you. A local expert will be in touch.',
+      intent: hiddenIntent('let'), cta: 'Get my free rental appraisal', call: CALL_US,
+      done: '<a class="btn btn-navy" href="properties.html?section=students">Search student properties</a>\n            <a class="btn btn-line" href="landlords.html">Landlord services</a>'
+    },
+    live: `
+  <section class="section" id="homes" aria-labelledby="homes-title">
+    <div class="wrap" id="tnLive">
+      <header class="sec-head">
+        <p class="kicker">Student properties</p>
+        <h2 id="homes-title">Available <em>now.</em></h2>
+        <p class="sub">Our latest student lets. Open any listing for photos, a map and to request a viewing.</p>
+      </header>
+      <div class="tn-block" data-listings="students">
+        <div class="tn-head"><h3>Latest student properties</h3><a class="tn-all" href="properties.html?section=students">Search all &rarr;</a></div>
+        <div class="pg-grid" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+`,
+    info: {
+      kicker: 'For landlords', h2: 'Letting to students? <em>Know the basics.</em>',
+      sub: 'A few things worth knowing before you let a property to students.',
+      cards: [
+        ['key', 'Tenancies and guarantors', 'Students often rent as a group. A joint tenancy makes everyone responsible for the whole rent, and many landlords ask for a guarantor.'],
+        ['pin', 'Plan around the academic year', 'Student lets often follow the academic year, so it pays to start early.'],
+        ['shield', 'HMO rules', 'A house let to three or more sharing students may be an HMO, with extra licensing and safety rules.', ['hmo.html', 'HMO landlords']]
+      ]
+    },
+    magnet: {
+      kicker: 'Own a student property?', h2: 'Find out what it could <em>achieve.</em>',
+      p: 'A free, no-obligation rental appraisal from your local team. It takes about a minute to ask.',
+      cta: 'Get my free appraisal', second: ['landlords.html', 'Landlord services']
+    },
+    faqSub: 'Straight answers to what students and landlords ask us most.',
+    faq: [
+      ['Are student properties HMOs?', 'Often, yes. A property let to three or more students sharing facilities may be an HMO, so licensing and safety rules can apply. See our HMO page for more.'],
+      ['How is student rent shown?', 'Student rents are usually shown per person per week (pppw). Our property search shows this where the listing provides it.'],
+      ['Is the rental appraisal free?', 'Yes. Your rental appraisal is free and there is no obligation to instruct us afterwards.'],
+      ['Is this legal advice?', GENERAL]
+    ],
+    cta: {
+      h2: 'Find a student home, <em>or let yours.</em>', p: 'Search our student properties, or ask for a free rental appraisal.',
+      primary: '<a class="btn btn-mint" href="properties.html?section=students">Search student properties</a>',
+      second: '<a class="btn btn-ghost" href="#get-started">Get my free appraisal</a>'
+    }
+  }
+];
+
 PAGES.forEach(p => write(fileOf(p), townPage(p)));
+SERVICE_PAGES.forEach(c => write(c.file, servicePage(c)));
 write('areas.html', areasPage());
-console.log(`Wrote ${PAGES.length} town pages and areas.html`);
+console.log(`Wrote ${PAGES.length} town pages, ${SERVICE_PAGES.length} service pages and areas.html`);

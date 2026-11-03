@@ -3,8 +3,8 @@
 (() => {
   const nav = $('#nav'), progress = $('#progress'), fab = $('#fab'), form = $('#get-started');
   const DONE_VIA = { phone: 'by phone', email: 'by email', text: 'by text message' };
-  const LABEL = { sell: 'Get my free valuation', let: 'Get my free rental appraisal' };
-  const WHAT = { sell: 'your free valuation', let: 'your free rental appraisal' };
+  const LABEL = { sell: 'Get my free valuation', let: 'Get my free rental appraisal', manage: 'Get my free management review' };
+  const WHAT = { sell: 'to arrange your free valuation', let: 'to arrange your free rental appraisal', manage: 'to talk through your property management options' };
 
   if (form) {
     const err = $('[data-err]', form), done = $('[data-done]', form);
@@ -51,7 +51,7 @@
       const showDone = preview => {
         const first = (d.name || '').split(/\s+/)[0];
         $('[data-done-title]', form).textContent = first ? `Thank you, ${first}` : 'Thank you';
-        $('[data-done-msg]', form).textContent = `We've got your details, and your local ${form.dataset.office} team will be in touch ${DONE_VIA[d.contact_pref] || ''} to arrange ${WHAT[d.intent]}.`.replace(/\s+/g, ' ');
+        $('[data-done-msg]', form).textContent = `We've got your details, and ${form.dataset.office ? `your local ${form.dataset.office} team` : 'a local expert'} will be in touch ${DONE_VIA[d.contact_pref] || ''} ${WHAT[d.intent]}.`.replace(/\s+/g, ' ');
         $('[data-preview]', form).hidden = !preview;
         form.classList.add('is-done');
         done.hidden = false;
@@ -65,8 +65,8 @@
       try {
         const res = await sendLead('valuation', {
           ...d,
-          town: form.dataset.town,
-          office: form.dataset.office,
+          ...(form.dataset.town ? { town: form.dataset.town } : {}),
+          ...(form.dataset.office ? { office: form.dataset.office } : {}),
           source: form.dataset.source,
           consent_statement: $('.ck-t', form).textContent.trim()
         });
@@ -100,9 +100,9 @@
   if (blocks.length && typeof MPB !== 'undefined') {
     const { el, loadFeed, card, watchImages, inSection, norm } = MPB;
     const root = $('#tnLive');
-    const names = root.dataset.match.split('|').map(norm);
+    const names = (root.dataset.match || '').split('|').filter(Boolean).map(norm);
     const town = root.dataset.town, q = root.dataset.q;
-    const here = p => names.includes(norm(p.hub)) || names.includes(norm(p.town));
+    const here = p => !names.length || names.includes(norm(p.hub)) || names.includes(norm(p.town));
     const isLive = p => p.status === 'available' || p.status === 'sstc';
 
     const skeleton = grid => grid.replaceChildren(...Array.from({ length: 3 }, () => {
@@ -116,15 +116,20 @@
     }));
     blocks.forEach(b => { const g = $('.pg-grid', b); watchImages(g); skeleton(g); });
 
+    const NONE = {
+      sales: { what: 'for sale', ask: 'Thinking of selling?', set: 'sell' },
+      lets: { what: 'to let', ask: 'Thinking of letting?', set: 'let' },
+      students: { what: 'available', ask: 'Own a student property?', set: 'let' }
+    };
     const empty = (s, grid) => {
-      const box = el('div', 'empty'), row = el('div', 'row');
+      const box = el('div', 'empty'), row = el('div', 'row'), n = NONE[s];
       const all = el('a', 'btn btn-navy', 'Search all properties');
       all.href = 'properties.html?section=' + s;
-      const val = el('a', 'btn btn-line', s === 'sales' ? 'Thinking of selling?' : 'Thinking of letting?');
+      const val = el('a', 'btn btn-line', n.ask);
       val.href = '#get-started';
-      val.dataset.set = s === 'sales' ? 'sell' : 'let';
+      val.dataset.set = n.set;
       row.append(all, val);
-      box.append(el('h3', '', `Nothing ${s === 'sales' ? 'for sale' : 'to let'} in ${town} right now`), el('p', '', 'New properties are added all the time. Search all of our listings, or tell us what you are looking for and we will let you know first.'), row);
+      box.append(el('h3', '', `Nothing ${n.what}${town ? ' in ' + town : ''} right now`), el('p', '', 'New properties are added all the time. Search all of our listings, or tell us what you are looking for and we will let you know first.'), row);
       grid.replaceChildren(box);
     };
 
@@ -134,7 +139,7 @@
         const s = b.dataset.listings, grid = $('.pg-grid', b), all = $('.tn-all', b);
         const live = feed.properties.filter(p => inSection(p, s) && isLive(p) && here(p));
         counts[s] = live.length;
-        all.href = `properties.html?section=${s}&q=${encodeURIComponent(q)}`;
+        all.href = `properties.html?section=${s}${q ? '&q=' + encodeURIComponent(q) : ''}`;
         all.textContent = live.length ? `View all ${live.length} \u2192` : 'Search all properties \u2192';
         if (!live.length) { empty(s, grid); return; }
         const pool = live.filter(p => p.status === 'available').sort((a, c) => a.rank - c.rank);
