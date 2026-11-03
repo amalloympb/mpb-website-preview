@@ -99,6 +99,13 @@ webhook, Zapier, Formspree and so on. **While it is empty the forms run in previ
 Each lead carries the property, price, CRM, whether it has a 360 tour, consent wording and attribution.
 `dataLayer` events are pushed for Google Tag Manager.
 
+## Office phone numbers and callbacks
+
+The six official office numbers (Darlington, Newcastle, Northallerton, Carlisle, Penrith, Kendal) live in `OFFICES`
+in `common.js`. That list drives the header **Call us** dialog (tap-to-call plus a callback request, sent as a
+`callback` lead) and each property's "nearest office" line. The footers of the six HTML pages repeat the numbers
+as plain markup, so update them there too if a number changes. Rightmove tracking numbers are deliberately not used.
+
 ## Before going live
 
 - Set `LEAD.endpoint`. Alerts also need a back end (or CRM automation) to send the emails.

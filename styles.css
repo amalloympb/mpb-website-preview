@@ -227,7 +227,12 @@ html[data-theme=dark] :is(.svc,.svc-more a,.wz-opt,.steps li,.area-list a){--spo
 .footer h4{color:#fff;font:500 .68rem Roboto,sans-serif;text-transform:uppercase;letter-spacing:.24em;margin-bottom:22px}
 .footer a{display:block;padding:5px 0;transition:color .3s}
 .footer a:hover{color:var(--mint)}
-.footer .offices{margin-top:20px;font-size:.68rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--mint)}
+.footer .foot-h{margin:26px 0 6px;color:var(--mint);font:500 .68rem Roboto,sans-serif;letter-spacing:.2em;text-transform:uppercase}
+.foot-tel{list-style:none;margin:0;padding:0;max-width:340px}
+.foot-tel li{border-bottom:1px solid rgba(255,255,255,.1)}
+.footer .foot-tel a{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:7px 0}
+.foot-tel span{font-variant-numeric:tabular-nums;color:#fff;white-space:nowrap;transition:color .3s}
+.foot-tel a:hover span{color:var(--mint)}
 .legal{margin-top:64px;padding-top:26px;border-top:1px solid rgba(255,255,255,.12);font-size:.78rem;color:rgba(255,255,255,.48)}
 .legal p+p{margin-top:12px}
 .footer .legal-links{display:flex;flex-wrap:wrap;gap:6px 28px}
@@ -376,6 +381,36 @@ dialog.cap #capSubmit{width:100%;margin-top:6px}
 html:has(dialog[open]){overflow:hidden}
 @keyframes pop{from{opacity:0;transform:translateY(14px)}}
 
+/* CALL US */
+.callbtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:22px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font:500 .7rem Roboto,sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .3s,border-color .3s}
+.callbtn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.6)}
+.callbtn .ic{width:18px;height:18px}
+.callbtn span{display:none}
+dialog.call-dlg{width:min(520px,calc(100% - 32px))}
+.call-in{position:relative;padding:clamp(28px,5vw,44px)}
+dialog.call-dlg form{padding:0}
+.call-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.call-list li{border-bottom:1px solid var(--line)}
+.call-list a{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;min-height:60px;padding:10px 6px;color:var(--head);transition:background .3s}
+.call-list a:hover{background:var(--soft)}
+.call-ic{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--soft);color:var(--acc)}
+.call-ic .ic{width:16px;height:16px}
+.call-who b{display:block;font-weight:500}
+.call-who small{display:block;font-size:.78rem;color:var(--muted)}
+.call-num{font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.call-cb{margin-top:20px}
+.call-cb summary{display:flex;align-items:center;min-height:44px;color:var(--acc);font-weight:500;cursor:pointer}
+.call-cb form{margin-top:14px}
+.call-cb .fgrid+.ck{margin-top:22px}
+.call-cb #callSubmit{width:100%;margin-top:6px}
+.call-note{margin-top:18px;font-size:.9rem;color:var(--muted)}
+.call-note .ic{width:16px;height:16px;vertical-align:-3px;margin-right:6px;color:var(--acc)}
+.call-note a,.call-note button{display:inline;padding:0;border:0;background:none;color:var(--acc);font:inherit;font-weight:500;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;cursor:pointer}
+.call-note a:hover,.call-note button:hover{color:var(--head)}
+.wz-hero .call-note{margin-top:0;padding:12px 20px 14px;color:rgba(255,255,255,.72)}
+.wz-hero .call-note .ic,.wz-hero .call-note a,.wz-hero .call-note button{color:var(--mint)}
+.wz-hero .call-note a:hover,.wz-hero .call-note button:hover{color:#fff}
+
 /* TOOLS */
 .tabs{display:flex;gap:clamp(20px,3.4vw,52px);margin-bottom:44px;width:100%;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line)}
 .tabs::-webkit-scrollbar{display:none}
@@ -480,6 +515,10 @@ html[data-theme=dark] .ck input:checked+.box{color:var(--navy-d)}
   .menu{gap:clamp(14px,1.4vw,20px);letter-spacing:.1em}
   .menu .btn-sm{padding:14px 18px}
 }
+@media(min-width:1281px){
+  .callbtn{width:auto;padding:0 18px}
+  .callbtn span{display:inline;margin-left:10px}
+}
 @media(max-width:1080px){
   .burger{display:block}
   .menu{position:fixed;inset:0;z-index:1;background:linear-gradient(165deg,var(--ink),var(--navy-d));flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:100px 40px 48px;overflow:auto;counter-reset:m;opacity:0;visibility:hidden;transition:opacity .5s,visibility 0s .5s;font-size:inherit;letter-spacing:0;text-transform:none}
@@ -552,6 +591,8 @@ html[data-theme=dark] .ck input:checked+.box{color:var(--navy-d)}
   .quick button:hover::after,.quick a:hover::after{background:var(--mint)}
   .quick span{display:inline-flex;align-items:center;min-height:44px}
   .footer a{padding:12px 0}
+  .footer .foot-tel a{padding:12px 0}
+  .call-note a,.call-note button{padding:13px 0}
   .footer .legal-links{gap:0 14px}
   .footer .legal-links a{padding:12px 6px}
   .linkrow a,.wz-alt a,a.more{display:inline-flex;align-items:center;min-height:44px}

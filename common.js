@@ -138,3 +138,148 @@ const coverArea = raw => {
   const hit = COVER_TOWNS.find(([, names]) => names.some(n => new RegExp(`\\b${n}\\b`).test(s)));
   return hit ? hit[0] : '';
 };
+
+// ---- Offices and phone numbers ----
+// Our own office lines. These are deliberately NOT the tracking numbers shown on Rightmove.
+// The footer markup on each page repeats the same numbers, so update both when one changes.
+const OFFICES = [
+  { id: 'darlington', name: 'Darlington', area: 'County Durham & Tees Valley', phone: '01325 582 101', lat: 54.5233, lng: -1.5528 },
+  { id: 'newcastle', name: 'Newcastle', area: 'Tyne & Wear and Northumberland', phone: '0191 212 0400', lat: 54.9783, lng: -1.6178 },
+  { id: 'northallerton', name: 'Northallerton', area: 'North Yorkshire', phone: '01609 777 757', lat: 54.3381, lng: -1.4343 },
+  { id: 'carlisle', name: 'Carlisle', area: 'Cumbria', phone: '01228 810 799', lat: 54.8951, lng: -2.9382 },
+  { id: 'penrith', name: 'Penrith', area: 'Cumbria', phone: '01768 840 619', lat: 54.6641, lng: -2.7527 },
+  { id: 'kendal', name: 'Kendal', area: 'Cumbria', phone: '01539 885 699', lat: 54.3283, lng: -2.7487 }
+];
+const telHref = phone => 'tel:+44' + phone.replace(/\D/g, '').slice(1);
+
+// Which office looks after a listing: Rightmove rows know their branch, the rest use the nearest office
+// by straight-line distance (null when nothing is within range, e.g. a missing position).
+const RM_BRANCH_OFFICE = { 90144: 'carlisle', 90147: 'penrith' };
+const officeFor = p => {
+  if (!p) return null;
+  const byBranch = RM_BRANCH_OFFICE[p.rm_branch];
+  if (byBranch) return OFFICES.find(o => o.id === byBranch);
+  if (typeof p.lat !== 'number' || typeof p.lng !== 'number') return null;
+  const rad = d => (d * Math.PI) / 180;
+  const miles = o => {
+    const h = Math.sin(rad(o.lat - p.lat) / 2) ** 2 + Math.cos(rad(p.lat)) * Math.cos(rad(o.lat)) * Math.sin(rad(o.lng - p.lng) / 2) ** 2;
+    return 3958.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+  };
+  const best = OFFICES.reduce((a, o) => (miles(o) < miles(a) ? o : a));
+  return miles(best) <= 45 ? best : null;
+};
+
+const PHONE_IC = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+
+// Header "Call us" button and the call / callback dialog (built here so every page gets it from one place)
+(() => {
+  const tools = $('.nav-tools');
+  if (!tools) return;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'callbtn';
+  btn.id = 'callBtn';
+  btn.setAttribute('aria-haspopup', 'dialog');
+  btn.setAttribute('aria-label', 'Call us');
+  btn.innerHTML = `${PHONE_IC}<span>Call us</span>`;
+  tools.prepend(btn);
+
+  const dlg = document.createElement('dialog');
+  dlg.className = 'cap call-dlg';
+  dlg.id = 'call';
+  dlg.setAttribute('aria-labelledby', 'callTitle');
+  dlg.innerHTML = `
+    <div class="call-in">
+      <button type="button" class="cap-x" data-close aria-label="Close"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+      <div id="callBody">
+        <p class="kicker">Speak to us</p>
+        <h3 id="callTitle">Call your local office</h3>
+        <p class="cap-sub">Tap a number to call, or request a callback below.</p>
+        <ul class="call-list">
+          ${OFFICES.map(o => `<li><a href="${telHref(o.phone)}" data-office="${o.id}"><span class="call-ic">${PHONE_IC}</span><span class="call-who"><b>${o.name}</b><small>${o.area.replace(/&/g, '&amp;')}</small></span><span class="call-num">${o.phone}</span></a></li>`).join('')}
+        </ul>
+        <details class="call-cb" id="callCb">
+          <summary>Request a callback instead</summary>
+          <form id="callForm" novalidate>
+            <div class="fgrid">
+              <label class="fld"><span class="lbl">Your name</span><span class="inp"><input type="text" name="name" autocomplete="name" required data-msg="Please tell us your name."></span></label>
+              <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="Please enter a valid UK phone number."></span></label>
+              <label class="fld full"><span class="lbl">Which office?</span><span class="inp"><select name="office"><option value="">Whichever is nearest</option>${OFFICES.map(o => `<option value="${o.id}">${o.name}</option>`).join('')}</select></span></label>
+            </div>
+            <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box so we can call you back."><span class="box"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box calling me back about this request, as set out in the <a href="https://www.mypropertybox.co.uk/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
+            <input type="text" name="company_website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <p class="wz-err" id="callErr" role="alert"></p>
+            <button type="submit" class="btn btn-navy" id="callSubmit">Request a callback</button>
+          </form>
+        </details>
+      </div>
+      <div class="cap-done" id="callDone" tabindex="-1" hidden>
+        <span class="done-ic"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span>
+        <h3>Thank you</h3>
+        <p>We&rsquo;ve got your request and a member of the team will call you back.</p>
+        <p class="wz-preview" id="callPreview" hidden>Preview mode: no lead destination is connected yet, so this was not sent.</p>
+        <div class="row"><button type="button" class="btn btn-navy" data-close>Close</button></div>
+      </div>
+    </div>`;
+  document.body.append(dlg);
+
+  const form = $('#callForm'), err = $('#callErr'), body = $('#callBody'), done = $('#callDone'), cb = $('#callCb');
+  let busy = false;
+
+  const open = (officeId = '', showForm = false) => {
+    form.reset();
+    $$('[aria-invalid]', form).forEach(el => el.removeAttribute('aria-invalid'));
+    err.textContent = '';
+    body.hidden = false;
+    done.hidden = true;
+    cb.open = showForm;
+    if (officeId) form.elements.office.value = officeId;
+    if (menu.classList.contains('open')) setMenu(false);
+    if (!dlg.open) dlg.showModal();
+    track('mpb_call_open', { office: officeId || 'any' });
+  };
+
+  btn.addEventListener('click', () => open());
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-call]');
+    if (!t) return;
+    e.preventDefault();
+    open(t.dataset.call, t.dataset.callback === 'true');
+  });
+  dlg.addEventListener('click', e => {
+    if (e.target === dlg || e.target.closest('[data-close]')) dlg.close();
+    const a = e.target.closest('a[data-office]');
+    if (a) track('mpb_call_click', { office: a.dataset.office });
+  });
+  form.addEventListener('input', e => { clearInvalid(e); err.textContent = ''; });
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (busy) return;
+    const bad = validate(form);
+    if (bad) { err.textContent = bad.msg; bad.el.focus(); return; }
+    let preview = false;
+    if (!form.elements.company_website.value) {
+      const submit = $('#callSubmit');
+      busy = true; submit.disabled = true; submit.textContent = 'Sending\u2026';
+      try {
+        const res = await sendLead('callback', {
+          source: 'header-call', ...collect(form),
+          consent_statement: $('.ck-t', form).textContent.trim()
+        });
+        preview = res.preview;
+        track('mpb_callback_submit');
+      } catch (x) {
+        err.textContent = 'Sorry, something went wrong. Please try again, or call us on one of the numbers above.';
+        return;
+      } finally { busy = false; submit.disabled = false; submit.textContent = 'Request a callback'; }
+    }
+    $('#callPreview').hidden = !preview;
+    body.hidden = true;
+    done.hidden = false;
+    done.focus();
+  });
+})();
+
+// Static "Prefer to talk?" notes get their phone icon from the one definition above
+$$('.call-note').forEach(n => n.insertAdjacentHTML('afterbegin', PHONE_IC + ' '));

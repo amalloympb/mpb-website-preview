@@ -529,6 +529,16 @@
     $('#ppPrint').addEventListener('click', () => window.print());
   };
 
+  // Tap-to-call line for the office that looks after this property (falls back to the general call dialog)
+  const callLine = p => {
+    const o = officeFor(p);
+    $('#enqCall').innerHTML = o
+      ? `${PHONE_IC} Prefer to talk? Call our ${o.name} team on <a href="${telHref(o.phone)}" data-office="${o.id}">${o.phone}</a> or <button type="button" data-call="${o.id}" data-callback="true">request a callback</button>.`
+      : `${PHONE_IC} Prefer to talk? <button type="button" data-call>Call us or request a callback</button>.`;
+    const a = $('#enqCall a');
+    if (a) a.addEventListener('click', () => track('mpb_call_click', { office: o.id, via: 'property', id }));
+  };
+
   const bar = (p, off, focusEnquiry) => {
     const b = $('#ppBar'), pr = priceParts(p);
     $('#barPrice').replaceChildren(...[pr.qual && el('small', '', pr.qual), el('b', '', pr.main + (pr.unit ? ' ' + pr.unit : ''))].filter(Boolean));
@@ -588,6 +598,7 @@
     gallery(p, photos, d, goTour);
     facts(p); features(d); description(d); floorplans(p, d);
     const focusEnquiry = enquiry(p, off, d);
+    callLine(p);
     if (p.section === 'sales') salesCalc(p, focusEnquiry); else letsCalc(p);
     initMap(p);
     share(p);
