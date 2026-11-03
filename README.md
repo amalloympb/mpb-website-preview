@@ -4,12 +4,29 @@ Static site. No build step.
 
 | Page | Purpose |
 |---|---|
-| `index.html` | Homepage: valuation wizard, free tools, areas |
-| `sell.html`, `let.html`, `landlords.html` | Lead-gen landing pages for vendors and landlords (valuation forms, `?loc=` pre-fills the area) |
+| `index.html` | Homepage: valuation form (hero), property search and new listings, free tools, areas |
+| `sell.html`, `let.html` | Lead-gen landing pages for vendors and landlords (valuation forms, `?loc=` pre-fills the area) |
+| `landlords.html` | Landlord route: service comparison (Let only / Rent collect / Fully managed), "switching agents is easy", compliance check |
+| `hmo.html`, `student.html` | HMO landlord guidance and lead form; live student listings and a rental-appraisal form |
+| `estate-agents-<town>.html`, `areas.html` | 16 town pages (local listings, nearest office, lead form, FAQ) and the "Areas we cover" index |
+| `contact.html`, `about.html`, `tenants.html` | Replace the old-site contact, about and tenants pages: enquiry form and office numbers, company overview, renting guide |
 | `properties.html` | Property search (grid, map, filters, saved homes, alerts) |
 | `property.html?id=<id>` | Property page: gallery, 360 tour, map, cost guide, viewing booking, lead capture |
 
 The nav is deliberately short: Sell, Let, Landlord Services, Areas we Cover, Property Search, Free Valuation.
+
+### Generated pages
+
+The town pages, `areas.html`, `hmo.html`, `student.html`, `contact.html`, `about.html` and `tenants.html` are **generated**.
+Edit `tools/build-pages.js` (town list, copy, FAQs, office assignments), then run:
+
+```
+node tools/build-pages.js
+```
+
+Never edit those HTML files by hand, as the next run overwrites them. The generator copies the header and footer from
+`sell.html`, so change the footer in the six hand-written pages (`index`, `sell`, `let`, `landlords`, `properties`,
+`property`) and re-run it. Behaviour lives in `town.js` and `town.css`.
 
 ## Run locally
 
@@ -91,6 +108,36 @@ node --test feed/test/rightmove.test.js    # adapter tests
   described at the top of the file. That needs the vendor's API credentials and documentation.
 - Where a feed leaves the rent frequency blank, a rent under £300 is treated as weekly (student lets).
 
+## Hosting
+
+**GitHub Pages preview** (current test link): `.github/workflows/pages.yml` publishes the static site on every push and
+every 30 minutes (after a feed refresh), with `noindex` added. Pages cannot run the viewing API, so property pages show
+the plain date/time enquiry form instead of the diary-based time picker.
+
+**Azure App Service** runs the same files plus the Node server, so the viewing-time API works:
+
+```
+az login
+./deploy/azure-deploy.ps1 -AppName <globally-unique-name>
+```
+
+- Needs the Azure CLI and a signed-in account. The script shows the subscription and asks before creating anything:
+  a resource group, a Linux App Service plan (default `B1`, `-Sku F1` for the free tier) and a Node 20 web app.
+- It zips only what the site needs (pages, `assets/`, `data/`, `vendor/`, `server/` without tests, data or `.env`),
+  adds `noindex` (use `-Index` at launch), deploys, and checks `/api/health`. `-PackageOnly` builds the zip and touches
+  nothing in Azure.
+- App settings it sets: `HOST=0.0.0.0`, `TRUST_PROXY=1`, `DIARY_MODE=demo` (`-DiaryMode live` omits it) and
+  `DATA_DIR` / `GEOCACHE_FILE` under `/home/mpb-data`, which survives redeploys. HTTPS only, TLS 1.2, FTPS off.
+- Add CRM secrets afterwards as app settings, never in code:
+  `az webapp config appsettings set -n <app> -g rg-mpb-preview --settings VECO_CLIENT_ID=... VECO_CLIENT_SECRET=... VECO_RESOURCE_IDS=...`
+- **The property feed on Azure is a snapshot** of `data/` at deploy time. To refresh it every 30 minutes, run
+  `node feed/sync.js` on a schedule and redeploy (for example a scheduled GitHub Actions job using
+  `azure/webapps-deploy`, or an Azure Function / Logic App). That is not set up yet.
+- Remove everything when finished: `az group delete --name rg-mpb-preview`.
+- Checked without an Azure subscription: the zip builds with Linux-style paths, the extracted package starts with the
+  production settings and serves the pages and `/api/health`, and the script stops cleanly when not signed in. It has
+  not yet been run against a real subscription.
+
 ## Lead capture
 
 All forms (valuation wizard, viewing/question/interest enquiries, sold-property alerts, search alerts) post JSON via
@@ -107,6 +154,21 @@ in `common.js`. That list drives the header **Call us** dialog (tap-to-call plus
 as plain markup, so update them there too if a number changes. Rightmove tracking numbers are deliberately not used.
 
 ## Before going live
+
+- **Confirm the facts.** The homepage and landing pages still say "seven offices" and list Cockermouth, but only six
+  offices have a confirmed number (the footer and call dialog show those six). The "15+ years", "£50m" and
+  "39-second valuation" claims have no evidence in this repo. The legal entity wording (My Property Box Ltd, MPB
+  North West Ltd, Acorn) needs checking. Nothing here invents opening hours, fees, reviews or named staff.
+- **Office assignments for town pages** are an inference (for example Durham, Hartlepool, Middlesbrough and Stockton
+  to Darlington, Sunderland, Gateshead and South Shields to Newcastle, Cockermouth to Carlisle). Correct them in
+  `tools/build-pages.js`.
+- **Landlord service tiers** on `landlords.html` are a draft with no prices. Confirm what each tier includes.
+- **Compliance check and HMO/student guidance** is general England-based guidance marked "not legal advice". Have it
+  reviewed.
+- **Still on the old site:** privacy, cookies, terms and complaints pages, careers, online payments and the instant
+  valuation tool (it sends `X-Frame-Options: SAMEORIGIN`, so it cannot be embedded; the hero form is the on-site
+  replacement). Move these before the old domain is switched off.
+- Add a `sitemap.xml`, `robots.txt` and the real canonical domain, and remove the `noindex` injection.
 
 - Set `LEAD.endpoint`. Alerts also need a back end (or CRM automation) to send the emails.
 - Rotate any CRM password that has been shared in chat or email, and use dedicated API or service accounts.
