@@ -27,7 +27,7 @@ jobs:
       - name: Assemble static site
         run: |
           mkdir _site
-          cp -r ./*.html ./*.css ./*.js data vendor _site/
+          cp -r ./*.html ./*.css ./*.js data vendor assets _site/
           touch _site/.nojekyll
           # Test copy: keep it out of search engines so it does not compete with mypropertybox.co.uk
           sed -i 's|<head>|<head><meta name="robots" content="noindex,nofollow">|' _site/*.html
