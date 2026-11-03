@@ -17,18 +17,6 @@ onScroll();
 window.addEventListener('scroll', requestScroll, { passive: true });
 window.addEventListener('resize', requestScroll);
 
-// Hero form: the button label follows the chosen intent (submit is handled with the lead wizard below)
-const heroForm = $('#heroForm'), goTxt = $('#goTxt');
-heroForm.addEventListener('change', e => {
-  if (e.target.name === 'intent') goTxt.textContent = e.target.value === 'let' ? 'Free appraisal' : 'Free valuation';
-});
-
-$$('.quick button[data-loc]').forEach(b => b.addEventListener('click', () => {
-  const loc = $('#loc');
-  loc.value = b.dataset.loc;
-  loc.focus();
-}));
-
 // Scroll reveals with a small stagger inside grids
 const targets = $$('.sec-head, .tabs, .svc, .svc-more a, .steps li, .how-grid > *, .linkrow, .area-list li, .wz-grid > *, .split > *, .stats-grid > div, .creds, .cta .wrap');
 targets.forEach(el => {
@@ -275,11 +263,14 @@ $('#ckReset').addEventListener('click', () => {
 });
 ckSync();
 
-// Valuation wizard
-const wz = $('#wz'), wzPanes = $$('.wz-pane', wz), wzNext = $('#wzNext'), wzNextTxt = $('#wzNextTxt');
+// Valuation form: step 1 lives in the hero, steps 2-4 expand the same card
+const wz = $('#valuation'), wzPanes = $$('.wz-pane', wz), wzNext = $('#wzNext'), wzNextTxt = $('#wzNextTxt');
 const wzBack = $('#wzBack'), wzErr = $('#wzErr'), wzLoc = $('#wzLoc'), wzCover = $('#wzCover'), wzDone = $('#wzDone');
+const wzSum = $('#wzSum'), goTxt = $('#goTxt'), heroEl = $('#start');
 const wzIntent = () => wz.elements.intent.value;
-let wzI = 0, wzBusy = false, wzSource = 'direct', wzAuto = 0;
+let wzI = 0, wzBusy = false, wzSource = 'hero';
+const GO_TXT = { sell: 'Free valuation', let: 'Free appraisal', manage: 'Free review' };
+const INTENT_LBL = { sell: 'Selling', let: 'Letting', manage: 'Landlord' };
 
 const syncCover = () => {
   const area = wzLoc.value.trim() ? coverArea(wzLoc.value) : '';
@@ -295,24 +286,37 @@ const syncIntent = () => {
     g.hidden = !on;
     $$('input, select', g).forEach(c => { c.disabled = !on; });
   });
+  goTxt.textContent = GO_TXT[it] || GO_TXT.sell;
   wzNextTxt.textContent = wzI < wzPanes.length - 1 ? 'Continue'
     : it === 'let' || it === 'manage' ? 'Get my free appraisal' : 'Get my free valuation';
+};
+
+// The details from step 1 carry through, shown as a summary strip with a way back
+const syncSummary = () => {
+  const beds = wz.elements.bedrooms.value;
+  const bits = [INTENT_LBL[wzIntent()], wzLoc.value.trim(), beds && (beds === 'Studio' ? 'Studio' : `${beds} bedroom${beds === '1' ? '' : 's'}`)];
+  $('#wzSumTxt').textContent = bits.filter(Boolean).join(' \u00b7 ');
 };
 
 const showStep = (n, focus = true) => {
   wzI = clamp(n, 0, wzPanes.length - 1);
   wzPanes.forEach((p, i) => { p.hidden = i !== wzI; });
+  wz.dataset.step = wzI + 1;
+  heroEl.classList.toggle('is-wizard', wzI > 0);
+  wzSum.hidden = wzI === 0;
+  if (wzI > 0) syncSummary();
   $('#wzStep').textContent = `Step ${wzI + 1} of ${wzPanes.length}`;
   $('#wzBar').style.width = (wzI + 1) / wzPanes.length * 100 + '%';
   wzBack.hidden = wzI === 0;
   wzErr.textContent = '';
   syncIntent();
-  if (focus) $('h3', wzPanes[wzI]).focus({ preventScroll: true });
+  if (focus) (wzI === 0 ? wzLoc : $('h3', wzPanes[wzI])).focus({ preventScroll: true });
 };
 
 const goStep = n => {
   showStep(n);
-  if (wz.getBoundingClientRect().top < 80) wz.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  const r = wz.getBoundingClientRect();
+  if (r.top < 80 || r.bottom > window.innerHeight) wz.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
 };
 
 const DONE_WHAT = {
@@ -329,6 +333,7 @@ const showDone = (preview, d) => {
   $('#wzDoneMsg').textContent = `We've got your details, and a local expert will be in touch ${DONE_VIA[d.contact_pref] || ''} ${DONE_WHAT[d.intent] || ''}.`.replace(/\s+/g, ' ').replace(' .', '.');
   $('#wzPreview').hidden = !preview;
   wz.classList.add('is-done');
+  heroEl.classList.add('is-wizard');
   wzDone.hidden = false;
   wzDone.focus({ preventScroll: true });
 };
@@ -370,22 +375,17 @@ wz.addEventListener('submit', async e => {
 });
 
 wzBack.addEventListener('click', () => goStep(wzI - 1));
+$('#wzEdit').addEventListener('click', () => goStep(0));
 wz.addEventListener('change', e => { if (e.target.name === 'intent') syncIntent(); });
 wz.addEventListener('input', e => {
   clearInvalid(e);
   wzErr.textContent = '';
   if (e.target === wzLoc) syncCover();
 });
-// A mouse click on an option card moves straight on; keyboard users press Continue
-wz.addEventListener('click', e => {
-  if (wzI !== 0 || e.detail === 0 || !e.target.closest('.wz-opt')) return;
-  clearTimeout(wzAuto);
-  wzAuto = setTimeout(() => { if (wzI === 0 && wzIntent()) wz.requestSubmit(); }, 220);
-});
 
+// Link-ins (popular areas, area cards, property pages) prefill step 1 and put the cursor on the first empty field
 const openWizard = ({ intent, loc, beds, source, scroll } = {}) => {
   if (wz.classList.contains('is-done')) resetWizard();
-  const prev = wzIntent();
   if (intent) {
     const r = $(`input[name="intent"][value="${intent}"]`, wz);
     if (r) r.checked = true;
@@ -396,18 +396,18 @@ const openWizard = ({ intent, loc, beds, source, scroll } = {}) => {
     if ([...sel.options].some(o => o.value === beds)) sel.value = beds;
   }
   if (source) wzSource = source;
-  syncIntent();
-  if (wzIntent() && (wzI === 0 || wzIntent() !== prev)) showStep(1);
-  if (scroll) wizEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  if (wzI > 0 && (intent || loc || beds)) showStep(0, false);
+  else syncIntent();
+  if (wzI === 0) {
+    const next = !wzLoc.value.trim() ? wzLoc : !wz.elements.bedrooms.value ? wz.elements.bedrooms : $('.btn-go', wz);
+    next.focus({ preventScroll: true });
+  }
+  if (scroll) wz.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
 };
 
-heroForm.addEventListener('submit', e => {
-  e.preventDefault();
-  const f = new FormData(heroForm);
-  openWizard({ intent: f.get('intent'), loc: (f.get('location') || '').trim(), beds: f.get('bedrooms'), source: 'hero', scroll: true });
-});
+$$('.quick button[data-loc]').forEach(b => b.addEventListener('click', () => openWizard({ loc: b.dataset.loc, source: 'hero-popular' })));
 
-// Any link with data-intent / data-loc, or to #valuation, opens the wizard (the link's own anchor does the scrolling)
+// Any link with data-intent / data-loc, or to #valuation, prefills the form (the link's own anchor does the scrolling)
 document.addEventListener('click', e => {
   const a = e.target.closest('a[data-intent], a[data-loc], a[href="#valuation"]');
   if (!a) return;
@@ -419,7 +419,7 @@ document.addEventListener('click', e => {
 {
   const q = new URLSearchParams(location.search), it = q.get('intent');
   const SRC = { search: 'property-search', property: 'property-page', sold: 'property-sold' };
-  if (['sell', 'let', 'manage', 'unsure'].includes(it)) openWizard({ intent: it, loc: (q.get('loc') || '').slice(0, 60), source: SRC[q.get('src')] || 'page' });
+  if (['sell', 'let', 'manage'].includes(it)) openWizard({ intent: it, loc: (q.get('loc') || '').slice(0, 60), source: SRC[q.get('src')] || 'page' });
 }
 
 // "Email me this" dialog for the calculators and the compliance checklist

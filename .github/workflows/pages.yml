@@ -3,6 +3,10 @@ name: Deploy test preview to GitHub Pages
 on:
   push:
     branches: [main]
+  # Refresh every property feed (Jupix, Veco, MRI and the Rightmove branch pages) every 30 minutes.
+  # GitHub treats cron as best effort, so a run can start a few minutes late.
+  schedule:
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -12,16 +16,34 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Keeps the per-listing detail cache between runs so each refresh only fetches listings that changed.
+      - uses: actions/cache@v4
+        with:
+          path: feed/cache.json
+          key: feed-cache-${{ github.run_id }}
+          restore-keys: feed-cache-
+
+      # A failed scheduled refresh stops here, so the live site keeps its last good data.
+      # On a push the committed data/ is used instead, so a feed problem never blocks a site change.
+      - name: Refresh property feeds
+        run: node feed/sync.js
+        continue-on-error: ${{ github.event_name != 'schedule' }}
 
       # Only the public site files are published. server/, feed/ and archive/ stay out of the preview.
       - name: Assemble static site

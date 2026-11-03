@@ -322,6 +322,43 @@ html[data-theme=dark] .done-ic{color:var(--navy-d)}
 .inp:has([aria-invalid=true]){border-color:var(--err);box-shadow:0 0 0 3px color-mix(in srgb,var(--err) 16%,transparent)}
 .wz-opts[aria-invalid=true],.chips[aria-invalid=true],.ck[aria-invalid=true]{outline:1px solid var(--err);outline-offset:6px}
 
+/* HERO VALUATION CARD: step 1 sits in the hero, steps 2-4 expand the same dark glass card */
+.wz.wz-hero{--wzp:clamp(22px,3vw,40px);--surface:rgba(7,25,43,.64);--bg:rgba(255,255,255,.07);--soft:rgba(255,255,255,.07);--text:#e8eef3;--head:#fff;--muted:rgba(255,255,255,.72);--line:rgba(255,255,255,.22);--acc:var(--mint);--mint-l:rgba(145,209,185,.14);--err:#ff9d8f;
+  max-width:820px;padding:0;background:var(--surface);border:1px solid rgba(255,255,255,.22);box-shadow:0 40px 80px -30px rgba(0,0,0,.6);scroll-margin-top:96px}
+.wz-hero .wz-start{animation:none}
+.wz-hero[data-step="1"] .wz-top,.wz-hero[data-step="1"] .wz-nav{display:none}
+.wz-hero .wz-top{margin:0 0 22px;padding:var(--wzp) var(--wzp) 0}
+.wz-hero .wz-pane:not(.wz-start){padding:0 var(--wzp)}
+.wz-hero .wz-pane h3{font-size:clamp(1.5rem,2.2vw,1.9rem);margin-bottom:22px}
+.wz-hero .wz-err{margin:0;padding:14px var(--wzp) 0}
+.wz-hero .wz-err:empty{display:none}
+.wz-hero .wz-nav{padding:14px var(--wzp) var(--wzp)}
+.wz-hero .wz-done{padding:var(--wzp)}
+.wz-hero .wz-cover{margin:0;padding:12px 24px;border-top:1px solid rgba(255,255,255,.18);font-size:.84rem;color:rgba(255,255,255,.8)}
+.wz-hero .wz-cover:empty{display:none}
+.wz-hero .wz-cover.ok{color:var(--mint)}
+.wz-hero .f:has([aria-invalid=true]){box-shadow:inset 0 0 0 2px var(--err)}
+.wz-hero select option{background:var(--navy-d);color:#fff}
+.wz-hero .chip input:checked+span,.wz-hero .ck input:checked+.box,.wz-hero .done-ic{color:var(--navy-d)}
+.wz-hero .ck a{color:var(--mint);border-bottom:1px solid currentColor}
+.wz-hero .btn-navy{background:var(--mint);color:var(--navy-d)}
+.wz-hero .btn-navy:hover{background:#fff}
+.wz-hero .btn-line{border-color:rgba(255,255,255,.5);color:#fff}
+.wz-hero .btn-line:hover{background:#fff;color:var(--navy-d)}
+.wz-hero .wz-nav .wz-back{min-height:44px}
+.wz-hero .seg span{padding-block:16px 14px}
+.wz-sum{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 var(--wzp) 24px;padding:4px 4px 4px 16px;background:var(--bg);border:1px solid var(--line);font-size:.92rem;color:var(--head)}
+.wz-edit{flex:none;min-height:44px;padding:0 14px;background:none;border:0;color:var(--mint);font:500 .68rem Roboto,sans-serif;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:color .3s}
+.wz-edit:hover{color:#fff}
+.hero.is-wizard .lead,.hero.is-wizard .quick{display:none}
+.hero.is-wizard h1{font-size:clamp(2.1rem,3.6vw,3.2rem);margin-bottom:26px}
+
+.next-steps{list-style:none;counter-reset:ns;margin-bottom:34px;border-top:1px solid rgba(255,255,255,.16)}
+.next-steps li{position:relative;counter-increment:ns;padding:26px 0 26px 66px;border-bottom:1px solid rgba(255,255,255,.16)}
+.next-steps li::before{content:counter(ns);position:absolute;left:0;top:26px;display:grid;place-items:center;width:42px;height:42px;border:1px solid var(--mint);color:var(--mint);font:500 1.15rem var(--serif)}
+.next-steps b{display:block;margin-bottom:6px;font:500 1.45rem/1.2 var(--serif);color:#fff}
+.next-steps p{font-size:.95rem;color:rgba(255,255,255,.78)}
+
 /* CAPTURE DIALOG */
 dialog.cap{position:fixed;inset:0;margin:auto;width:min(480px,calc(100% - 32px));max-height:calc(100dvh - 32px);padding:0;overflow:auto;color:var(--text);background:var(--surface);border:1px solid var(--line);box-shadow:0 60px 120px -30px rgba(0,0,0,.7)}
 dialog.cap::backdrop{background:rgba(7,25,43,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -474,7 +511,8 @@ html[data-theme=dark] .ck input:checked+.box{color:var(--navy-d)}
   .wrap{padding-inline:22px}
   .section{padding:84px 0}
   .sec-head{margin-bottom:48px}
-  .hero-inner{padding-top:130px}
+  .hero-inner{padding-top:112px}
+  .lead{font-size:1.02rem;margin:20px 0 26px}
   .hero-media img{object-position:80% 50%}
   .fields{flex-direction:column}
   .f{border-right:0;border-bottom:1px solid rgba(255,255,255,.18);padding:15px 20px}

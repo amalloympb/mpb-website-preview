@@ -1,7 +1,7 @@
 // Property search: filters, autocomplete, grid/map views, shortlist and search alerts.
 // Data comes from data/properties.json (written by feed/sync.js); see listing.js for the shared pieces.
 (() => {
-  const { el, icon, money, loadFeed, card, watchImages, favs, ago, valueOf, priceText } = MPB;
+  const { el, icon, money, loadFeed, card, watchImages, favs, ago, valueOf, priceText, BANDS, norm, inSection } = MPB;
   const PAGE = 24;
   const LIVE_URL = 'https://www.mypropertybox.co.uk/results-gallery.php?section=';
 
@@ -10,12 +10,7 @@
     lets: { tab: 'To let', noun: 'to let', head: 'properties to let', soldLbl: 'Include let agreed' },
     students: { tab: 'Students', noun: 'student lets', head: 'student properties', soldLbl: 'Include let agreed' }
   };
-  const BANDS = {
-    sales: { unit: '', vals: [50e3, 75e3, 100e3, 125e3, 150e3, 175e3, 200e3, 250e3, 300e3, 400e3, 500e3, 750e3, 1e6] },
-    lets: { unit: ' pcm', vals: [400, 500, 600, 700, 800, 900, 1000, 1250, 1500, 2000, 3000] },
-    students: { unit: ' pppw', vals: [100, 120, 140, 160, 180, 200] }
-  };
-  const TYPES = [['house', 'Houses'], ['flat', 'Flats & apartments'], ['bungalow', 'Bungalows'], ['room', 'Rooms'], ['land', 'Land'], ['commercial', 'Commercial'], ['other', 'Other']];
+  const TYPES =  [['house', 'Houses'], ['flat', 'Flats & apartments'], ['bungalow', 'Bungalows'], ['room', 'Rooms'], ['land', 'Land'], ['commercial', 'Commercial'], ['other', 'Other']];
   const SORTS = ['new', 'price-asc', 'price-desc', 'beds-desc'];
 
   const form = $('#ps'), qIn = $('#q'), qClear = $('#qClear'), qList = $('#qList');
@@ -27,10 +22,8 @@
   const S = { section: 'sales', q: '', min: 0, max: 0, beds: 0, type: '', sold: false, tour: false, sort: 'new', view: 'grid', saved: false, shown: PAGE };
   let all = [], F = [], names = [], ready = false;
 
-  const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   const tokens = s => norm(s).split(' ').filter(Boolean);
-  const inSection = (p, s) => (s === 'sales' ? p.section === 'sales' : s === 'students' ? !!p.students : p.section === 'lets' && !p.students);
-  const gate = p => p.status === 'available' || p.status === 'sstc' || S.sold;
+  const gate =  p => p.status === 'available' || p.status === 'sstc' || S.sold;
   const priceOf = (p, s) => (s === 'sales' ? p.price : s === 'students' ? p.price_pppw : p.price_pcm);
   const matchLoc = (p, toks) => toks.every(t => p._p.includes(' ' + t));
   const opt = (v, t) => { const o = el('option', '', t); o.value = v; return o; };

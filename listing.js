@@ -7,7 +7,7 @@ const MPB = (() => {
   const NS = 'http://www.w3.org/2000/svg';
   // Embeddable 360 tour providers and EPC hosts; the sync applies the same lists, this is the client-side backstop.
   const TOUR_RX = /^(?:tour\.giraffe360\.com|my\.matterport\.com|kuula\.co|view\.ricoh360\.com)$/;
-  const EPC_RX = /^(?:find-energy-certificate\.service\.gov\.uk|epc\.jupix\.co\.uk|media2\.jupix\.co\.uk)$/;
+  const EPC_RX = /^(?:find-energy-certificate\.service\.gov\.uk|epc\.jupix\.co\.uk|media2\.jupix\.co\.uk|media\.rightmove\.co\.uk)$/;
 
   const el = (tag, cls, txt) => {
     const e = document.createElement(tag);
@@ -235,8 +235,18 @@ const MPB = (() => {
   // OpenStreetMap's public tiles suit launch-level traffic; move to a keyed provider (MapTiler, Stadia, Mapbox) before heavy use
   const TILES = { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', options: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' } };
 
+  const norm = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const inSection = (p, s) => (s === 'sales' ? p.section === 'sales' : s === 'students' ? !!p.students : p.section === 'lets' && !p.students);
+
+  // Price bands shared by the search page and the homepage search (values must match the URL params properties.js accepts)
+  const BANDS = {
+    sales: { unit: '', vals: [50e3, 75e3, 100e3, 125e3, 150e3, 175e3, 200e3, 250e3, 300e3, 400e3, 500e3, 750e3, 1e6] },
+    lets: { unit: ' pcm', vals: [400, 500, 600, 700, 800, 900, 1000, 1250, 1500, 2000, 3000] },
+    students: { unit: ' pppw', vals: [100, 120, 140, 160, 180, 200] }
+  };
+
   return {
-    ID_RX, el, icon, https, money, loadFeed, loadDetail, propertyHref, priceParts, priceText, bedsText, statusText, isOff,
+    BANDS, norm, inSection, ID_RX, el, icon, https, money, loadFeed, loadDetail, propertyHref, priceParts, priceText, bedsText, statusText, isOff,
     valueOf, ago, valuationHref, similar, placeholder, card, watchImages, toast, favs, syncFavs, TILES
   };
 })();

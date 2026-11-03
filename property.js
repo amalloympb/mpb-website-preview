@@ -256,7 +256,9 @@
     w.hidden = !warn;
     w.textContent = warn;
     $('#ppFav').dataset.fav = p.id;
-    $('#ppLive').href = https(p.url) || 'https://www.mypropertybox.co.uk/';
+    const live = $('#ppLive');
+    live.href = https(p.url) || 'https://www.mypropertybox.co.uk/';
+    if (p.source === 'rightmove') live.textContent = 'View on Rightmove';
     return sk;
   };
 

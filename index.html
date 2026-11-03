@@ -23,6 +23,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="listing.css">
+<link rel="stylesheet" href="home.css">
 <script>document.documentElement.classList.add('js');try{var t=localStorage.getItem('mpb-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
@@ -51,6 +53,10 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+    <symbol id="i-bed" viewBox="0 0 24 24"><path d="M2 18V6m0 8h20v4m0-4v-2a3 3 0 0 0-3-3h-8v5"/><circle cx="6.5" cy="10.5" r="1.5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v12H3z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-360" viewBox="0 0 24 24"><ellipse cx="12" cy="13" rx="10" ry="4.2"/><circle cx="12" cy="12" r="2.2"/><path d="m9.5 5.5 2.5-2.3 2.5 2.3M12 3.2V7"/></symbol>
   </defs>
 </svg>
 
@@ -85,19 +91,91 @@
         <h1>Know what your property is <em>really worth.</em></h1>
         <p class="lead">Free sales valuations and rental appraisals from local experts, across seven offices in the North East, North Yorkshire and Cumbria. Start online in about a minute.</p>
 
-        <form class="search" id="heroForm" novalidate>
-          <div class="seg" role="radiogroup" aria-label="I am">
-            <label><input type="radio" name="intent" value="sell" checked><span>Selling</span></label>
-            <label><input type="radio" name="intent" value="let"><span>Letting</span></label>
+        <form class="search wz wz-hero" id="valuation" data-step="1" novalidate aria-label="Free valuation request">
+          <div class="wz-top">
+            <span id="wzStep">Step 1 of 4</span>
+            <div class="wz-progress"><i id="wzBar"></i></div>
           </div>
-          <div class="fields">
-            <label class="f f-loc"><span>Property postcode or town</span>
-              <input type="text" id="loc" name="location" placeholder="e.g. DL1 5NA or Carlisle" autocomplete="off">
-            </label>
-            <label class="f"><span>Bedrooms</span>
-              <select name="bedrooms"><option value="">Any</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5+</option></select>
-            </label>
-            <button class="btn btn-go" type="submit"><svg class="ic"><use href="#i-bolt"/></svg> <span id="goTxt">Free valuation</span></button>
+          <div class="wz-sum" id="wzSum" hidden><span id="wzSumTxt"></span><button type="button" class="wz-edit" id="wzEdit">Change</button></div>
+
+          <div class="wz-pane wz-start" data-step="1">
+            <div class="seg" role="radiogroup" aria-label="I am">
+              <label><input type="radio" name="intent" value="sell" checked><span>Selling</span></label>
+              <label><input type="radio" name="intent" value="let"><span>Letting</span></label>
+              <label><input type="radio" name="intent" value="manage"><span>Landlord</span></label>
+            </div>
+            <div class="fields">
+              <label class="f f-loc"><span>Property postcode or town</span>
+                <input type="text" id="wzLoc" name="location" placeholder="e.g. DL1 5NA or Carlisle" autocomplete="off" required data-msg="Please tell us where the property is.">
+              </label>
+              <label class="f"><span>Bedrooms</span>
+                <select name="bedrooms" required data-msg="Please choose the number of bedrooms."><option value="">Select&hellip;</option><option value="Studio">Studio</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5+</option></select>
+              </label>
+              <button class="btn btn-go" type="submit"><svg class="ic"><use href="#i-bolt"/></svg> <span id="goTxt">Free valuation</span></button>
+            </div>
+            <p class="hint wz-cover" id="wzCover" aria-live="polite"></p>
+          </div>
+
+          <div class="wz-pane" data-step="2" hidden>
+            <h3 tabindex="-1">Tell us about the property</h3>
+            <div class="fgrid">
+              <label class="fld full"><span class="lbl">House number or street <small>(optional)</small></span><span class="inp"><input type="text" name="address" placeholder="e.g. 12 Grange Road" autocomplete="off"></span></label>
+              <label class="fld"><span class="lbl">Property type</span><span class="inp"><select name="property_type" required data-msg="Please choose a property type."><option value="">Select&hellip;</option><option value="house">House</option><option value="flat">Flat / apartment</option><option value="bungalow">Bungalow</option><option value="hmo">HMO / student let</option><option value="other">Other</option></select></span></label>
+              <label class="fld" data-for="sell unsure"><span class="lbl">What do you think it's worth? <small>(optional)</small></span><span class="inp"><i>&pound;</i><input type="number" name="est_value" min="0" step="5000" inputmode="decimal" placeholder="e.g. 250000"></span></label>
+              <label class="fld" data-for="let manage" hidden><span class="lbl">Rent per month <small>(optional)</small></span><span class="inp"><i>&pound;</i><input type="number" name="est_rent" min="0" step="25" inputmode="decimal" placeholder="e.g. 850" disabled></span></label>
+            </div>
+          </div>
+
+          <div class="wz-pane" data-step="3" hidden>
+            <h3 tabindex="-1">What's your timeline?</h3>
+            <div class="chips" role="radiogroup" aria-label="Timeline">
+              <label class="chip"><input type="radio" name="timeline" value="asap" required data-msg="Please choose a timeline."><span>As soon as possible</span></label>
+              <label class="chip"><input type="radio" name="timeline" value="within-3-months"><span>Within 3 months</span></label>
+              <label class="chip"><input type="radio" name="timeline" value="3-6-months"><span>3&ndash;6 months</span></label>
+              <label class="chip"><input type="radio" name="timeline" value="exploring"><span>Just exploring</span></label>
+            </div>
+            <div class="fgrid">
+              <label class="fld" data-for="sell unsure"><span class="lbl">Reason for selling <small>(optional)</small></span><span class="inp"><select name="reason"><option value="">Select&hellip;</option><option value="moving">Moving home</option><option value="downsizing">Downsizing</option><option value="growing-family">Growing family</option><option value="relocating">Relocating</option><option value="investment">Selling an investment</option><option value="inherited">Inherited property</option><option value="other">Other</option></select></span></label>
+              <label class="fld" data-for="sell"><span class="lbl">On the market already? <small>(optional)</small></span><span class="inp"><select name="listed_elsewhere"><option value="">Select&hellip;</option><option value="no">No</option><option value="yes">Yes, with another agent</option><option value="withdrawn">It was, but was withdrawn</option></select></span></label>
+              <label class="fld" data-for="let manage unsure" hidden><span class="lbl">Properties you let <small>(optional)</small></span><span class="inp"><select name="portfolio" disabled><option value="">Select&hellip;</option><option value="1">1 property</option><option value="2-4">2&ndash;4 properties</option><option value="5-9">5&ndash;9 properties</option><option value="10+">10 or more</option></select></span></label>
+              <label class="fld" data-for="let manage" hidden><span class="lbl">Who manages it today? <small>(optional)</small></span><span class="inp"><select name="managed_by" disabled><option value="">Select&hellip;</option><option value="not-let">Not currently let</option><option value="self">I manage it myself</option><option value="agent">Another agent</option></select></span></label>
+            </div>
+          </div>
+
+          <div class="wz-pane" data-step="4" hidden>
+            <h3 tabindex="-1">How can we reach you?</h3>
+            <div class="fgrid">
+              <label class="fld full"><span class="lbl">Full name</span><span class="inp"><input type="text" name="name" autocomplete="name" required data-msg="Please enter your name."></span></label>
+              <label class="fld"><span class="lbl">Email</span><span class="inp"><input type="email" name="email" autocomplete="email" inputmode="email" required data-v="email" data-msg="Please enter your email address."></span></label>
+              <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="Please enter a phone number so we can arrange your visit."></span></label>
+              <div class="fld full"><span class="lbl">Best way to reach you</span>
+                <div class="chips chips-sm" role="radiogroup" aria-label="Preferred contact method">
+                  <label class="chip"><input type="radio" name="contact_pref" value="phone" checked><span>Phone</span></label>
+                  <label class="chip"><input type="radio" name="contact_pref" value="email"><span>Email</span></label>
+                  <label class="chip"><input type="radio" name="contact_pref" value="text"><span>Text message</span></label>
+                </div>
+              </div>
+            </div>
+            <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box to confirm you're happy for us to contact you."><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box contacting me about this request. My details will be used as set out in the <a href="https://www.mypropertybox.co.uk/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
+            <label class="ck"><input type="checkbox" name="marketing" value="yes"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>Send me occasional property market updates and landlord tips. <em>(Optional)</em></small></span></label>
+            <input type="text" name="company_website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          </div>
+
+          <p class="wz-err" id="wzErr" role="alert"></p>
+          <div class="wz-nav">
+            <button type="button" class="wz-back" id="wzBack" hidden><svg class="ic"><use href="#i-arrow"/></svg> Back</button>
+            <button type="submit" class="btn btn-navy" id="wzNext"><span id="wzNextTxt">Continue</span><svg class="ic"><use href="#i-arrow"/></svg></button>
+          </div>
+
+          <div class="wz-done" id="wzDone" tabindex="-1" hidden>
+            <span class="done-ic"><svg class="ic"><use href="#i-check"/></svg></span>
+            <h3 id="wzDoneTitle">Thank you</h3>
+            <p id="wzDoneMsg"></p>
+            <p class="wz-preview" id="wzPreview" hidden>Preview mode: no lead destination is connected yet, so this request was not sent.</p>
+            <div class="row">
+              <a class="btn btn-navy" href="#tools">Try our free calculators</a>
+              <a class="btn btn-line" href="properties.html">Browse properties</a>
+            </div>
           </div>
         </form>
 
@@ -145,6 +223,41 @@
     </div>
   </section>
 
+  <!-- PROPERTY SEARCH -->
+  <section class="section alt find" id="find" aria-labelledby="find-title">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">Property search</p>
+        <h2 id="find-title">Find your <em>next home.</em></h2>
+        <p class="sub">Search live homes to buy and rent across our areas, with 360&deg; tours on selected sales. Listings update from our systems throughout the day.</p>
+      </header>
+      <form class="hs" id="homeSearch" action="properties.html" method="get" role="search" aria-label="Property search">
+        <div class="seg" role="radiogroup" aria-label="Search type">
+          <label><input type="radio" name="section" value="sales" checked><span>Buy</span></label>
+          <label><input type="radio" name="section" value="lets"><span>Rent</span></label>
+          <label><input type="radio" name="section" value="students"><span>Student</span></label>
+        </div>
+        <div class="hs-grid">
+          <label class="fld hs-loc"><span class="lbl">Location</span><span class="inp"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg><input type="search" id="hsQ" name="q" list="hsPlaces" maxlength="60" placeholder="Town or area" autocomplete="off"></span></label>
+          <datalist id="hsPlaces"></datalist>
+          <label class="fld"><span class="lbl">Min price</span><span class="inp"><select id="hsMin" name="min"><option value="">No min</option></select></span></label>
+          <label class="fld"><span class="lbl">Max price</span><span class="inp"><select id="hsMax" name="max"><option value="">No max</option></select></span></label>
+          <label class="fld hs-beds"><span class="lbl">Bedrooms</span><span class="inp"><select id="hsBeds" name="beds"><option value="">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option></select></span></label>
+          <button class="btn btn-navy hs-go" type="submit"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg> Search</button>
+        </div>
+        <div class="hs-pop" id="hsPop"></div>
+      </form>
+
+      <div class="hs-head">
+        <h3 id="hsHead">Latest homes for sale</h3>
+        <a class="hs-all" id="hsAll" href="properties.html?section=sales">View all properties &rarr;</a>
+      </div>
+      <div class="pg-grid hs-list" id="hsGrid" aria-live="polite">
+        <p class="hs-note"><a href="properties.html">Search all properties</a></p>
+      </div>
+    </div>
+  </section>
+
   <!-- SERVICES -->
   <section class="section" id="services">
     <div class="wrap">
@@ -188,7 +301,7 @@
           <p class="kicker">For vendors</p>
           <h3>Selling your home</h3>
           <ol class="steps">
-            <li><span class="n">01</span><h4>Free valuation</h4><p>An instant online estimate in 39 seconds, or a full appraisal with a local expert.</p></li>
+            <li><span class="n">01</span><h4>Free valuation</h4><p>An instant online estimate, or a full appraisal with a local expert.</p></li>
             <li><span class="n">02</span><h4>Your plan to sell</h4><p>A marketing plan built around your property, your price and your timeline.</p></li>
             <li><span class="n">03</span><h4>Sold &amp; completed</h4><p>We keep you updated and guide the sale through to completion.</p></li>
           </ol>
@@ -458,100 +571,27 @@
   </section>
 
   <!-- VALUATION WIZARD -->
-  <section class="section dark wz-sec" id="valuation" aria-labelledby="wz-title">
+  <section class="section dark wz-sec" id="next" aria-labelledby="next-title">
     <div class="wrap wz-grid">
       <div class="wz-copy">
         <p class="kicker">Free valuation</p>
-        <h2 id="wz-title">Let's find out what it's <em>worth.</em></h2>
-        <p class="sub">Tell us a little about your property. A local expert will come back with a free sales valuation or rental appraisal, tailored to your goals.</p>
+        <h2 id="next-title">What happens <em>next?</em></h2>
+        <p class="sub">No obligation and no pressure. Start with the form at the top of the page and a local expert will take it from there.</p>
         <ul class="wz-pts">
           <li><svg class="ic"><use href="#i-check"/></svg>Completely free, and quick to complete</li>
           <li><svg class="ic"><use href="#i-pin"/></svg>Handled by the local team for your area</li>
           <li><svg class="ic"><use href="#i-shield"/></svg>Your details are kept private and handled under our Privacy Policy</li>
         </ul>
-        <p class="wz-alt"><span>In a hurry?</span> <a href="https://valuation.mypropertybox.co.uk/home/3843" target="_blank" rel="noopener">Instant online valuation in 39 seconds <svg class="ic"><use href="#i-arrow"/></svg></a></p>
+        <p class="wz-alt"><span>In a hurry?</span> <a href="https://valuation.mypropertybox.co.uk/home/3843" target="_blank" rel="noopener">Try our instant online valuation <svg class="ic"><use href="#i-arrow"/></svg></a></p>
       </div>
-
-      <form class="wz" id="wz" novalidate>
-        <div class="wz-top">
-          <span id="wzStep">Step 1 of 4</span>
-          <div class="wz-progress"><i id="wzBar"></i></div>
-        </div>
-
-        <div class="wz-pane" data-step="1">
-          <h3 tabindex="-1">What would you like to do?</h3>
-          <div class="wz-opts" role="radiogroup" aria-label="What would you like to do?">
-            <label class="wz-opt"><input type="radio" name="intent" value="sell" required data-msg="Please choose an option to continue."><svg class="ic"><use href="#i-home"/></svg><b>Sell my property</b><small>Free sales valuation</small></label>
-            <label class="wz-opt"><input type="radio" name="intent" value="let"><svg class="ic"><use href="#i-key"/></svg><b>Let my property</b><small>Free rental appraisal</small></label>
-            <label class="wz-opt"><input type="radio" name="intent" value="manage"><svg class="ic"><use href="#i-wrench"/></svg><b>I'm already a landlord</b><small>Compare property management</small></label>
-            <label class="wz-opt"><input type="radio" name="intent" value="unsure"><svg class="ic"><use href="#i-chart"/></svg><b>Not sure yet</b><small>Talk through my options</small></label>
-          </div>
-        </div>
-
-        <div class="wz-pane" data-step="2" hidden>
-          <h3 tabindex="-1">Tell us about the property</h3>
-          <div class="fgrid">
-            <label class="fld full"><span class="lbl">Postcode or town</span><span class="inp"><input type="text" name="location" id="wzLoc" placeholder="e.g. DL1 5NA or Carlisle" autocomplete="off" required data-msg="Please tell us where the property is."></span><span class="hint wz-cover" id="wzCover" aria-live="polite"></span></label>
-            <label class="fld full"><span class="lbl">House number or street <small>(optional)</small></span><span class="inp"><input type="text" name="address" placeholder="e.g. 12 Grange Road" autocomplete="off"></span></label>
-            <label class="fld"><span class="lbl">Property type</span><span class="inp"><select name="property_type" required data-msg="Please choose a property type."><option value="">Select&hellip;</option><option value="house">House</option><option value="flat">Flat / apartment</option><option value="bungalow">Bungalow</option><option value="hmo">HMO / student let</option><option value="other">Other</option></select></span></label>
-            <label class="fld"><span class="lbl">Bedrooms</span><span class="inp"><select name="bedrooms" required data-msg="Please choose the number of bedrooms."><option value="">Select&hellip;</option><option value="Studio">Studio</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5+</option></select></span></label>
-            <label class="fld full" data-for="sell unsure"><span class="lbl">What do you think it's worth? <small>(optional)</small></span><span class="inp"><i>&pound;</i><input type="number" name="est_value" min="0" step="5000" inputmode="decimal" placeholder="e.g. 250000"></span></label>
-            <label class="fld full" data-for="let manage" hidden><span class="lbl">Rent per month <small>(current or hoped-for, optional)</small></span><span class="inp"><i>&pound;</i><input type="number" name="est_rent" min="0" step="25" inputmode="decimal" placeholder="e.g. 850" disabled></span></label>
-          </div>
-        </div>
-
-        <div class="wz-pane" data-step="3" hidden>
-          <h3 tabindex="-1">What's your timeline?</h3>
-          <div class="chips" role="radiogroup" aria-label="Timeline">
-            <label class="chip"><input type="radio" name="timeline" value="asap" required data-msg="Please choose a timeline."><span>As soon as possible</span></label>
-            <label class="chip"><input type="radio" name="timeline" value="within-3-months"><span>Within 3 months</span></label>
-            <label class="chip"><input type="radio" name="timeline" value="3-6-months"><span>3&ndash;6 months</span></label>
-            <label class="chip"><input type="radio" name="timeline" value="exploring"><span>Just exploring</span></label>
-          </div>
-          <div class="fgrid">
-            <label class="fld" data-for="sell unsure"><span class="lbl">Reason for selling <small>(optional)</small></span><span class="inp"><select name="reason"><option value="">Select&hellip;</option><option value="moving">Moving home</option><option value="downsizing">Downsizing</option><option value="growing-family">Growing family</option><option value="relocating">Relocating</option><option value="investment">Selling an investment</option><option value="inherited">Inherited property</option><option value="other">Other</option></select></span></label>
-            <label class="fld" data-for="sell"><span class="lbl">On the market already? <small>(optional)</small></span><span class="inp"><select name="listed_elsewhere"><option value="">Select&hellip;</option><option value="no">No</option><option value="yes">Yes, with another agent</option><option value="withdrawn">It was, but was withdrawn</option></select></span></label>
-            <label class="fld" data-for="let manage unsure" hidden><span class="lbl">Properties you let <small>(optional)</small></span><span class="inp"><select name="portfolio" disabled><option value="">Select&hellip;</option><option value="1">1 property</option><option value="2-4">2&ndash;4 properties</option><option value="5-9">5&ndash;9 properties</option><option value="10+">10 or more</option></select></span></label>
-            <label class="fld" data-for="let manage" hidden><span class="lbl">Who manages it today? <small>(optional)</small></span><span class="inp"><select name="managed_by" disabled><option value="">Select&hellip;</option><option value="not-let">Not currently let</option><option value="self">I manage it myself</option><option value="agent">Another agent</option></select></span></label>
-          </div>
-        </div>
-
-        <div class="wz-pane" data-step="4" hidden>
-          <h3 tabindex="-1">How can we reach you?</h3>
-          <div class="fgrid">
-            <label class="fld full"><span class="lbl">Full name</span><span class="inp"><input type="text" name="name" autocomplete="name" required data-msg="Please enter your name."></span></label>
-            <label class="fld"><span class="lbl">Email</span><span class="inp"><input type="email" name="email" autocomplete="email" inputmode="email" required data-v="email" data-msg="Please enter your email address."></span></label>
-            <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="Please enter a phone number so we can arrange your visit."></span></label>
-            <div class="fld full"><span class="lbl">Best way to reach you</span>
-              <div class="chips chips-sm" role="radiogroup" aria-label="Preferred contact method">
-                <label class="chip"><input type="radio" name="contact_pref" value="phone" checked><span>Phone</span></label>
-                <label class="chip"><input type="radio" name="contact_pref" value="email"><span>Email</span></label>
-                <label class="chip"><input type="radio" name="contact_pref" value="text"><span>Text message</span></label>
-              </div>
-            </div>
-          </div>
-          <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box to confirm you're happy for us to contact you."><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box contacting me about this request. My details will be used as set out in the <a href="https://www.mypropertybox.co.uk/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
-          <label class="ck"><input type="checkbox" name="marketing" value="yes"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>Send me occasional property market updates and landlord tips. <em>(Optional)</em></small></span></label>
-          <input type="text" name="company_website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-        </div>
-
-        <p class="wz-err" id="wzErr" role="alert"></p>
-        <div class="wz-nav">
-          <button type="button" class="wz-back" id="wzBack" hidden><svg class="ic"><use href="#i-arrow"/></svg> Back</button>
-          <button type="submit" class="btn btn-navy" id="wzNext"><span id="wzNextTxt">Continue</span><svg class="ic"><use href="#i-arrow"/></svg></button>
-        </div>
-
-        <div class="wz-done" id="wzDone" tabindex="-1" hidden>
-          <span class="done-ic"><svg class="ic"><use href="#i-check"/></svg></span>
-          <h3 id="wzDoneTitle">Thank you</h3>
-          <p id="wzDoneMsg"></p>
-          <p class="wz-preview" id="wzPreview" hidden>Preview mode: no lead destination is connected yet, so this request was not sent.</p>
-          <div class="row">
-            <a class="btn btn-navy" href="#tools">Try our free calculators</a>
-            <a class="btn btn-line" href="https://valuation.mypropertybox.co.uk/home/3843" target="_blank" rel="noopener">Instant online valuation</a>
-          </div>
-        </div>
-      </form>
+      <div>
+        <ol class="next-steps">
+          <li><b>Tell us about the property</b><p>Share the postcode, bedrooms and a few details. It takes about a minute and there is nothing to pay.</p></li>
+          <li><b>Your local team gets in touch</b><p>Someone from the office covering your area contacts you to talk through your goals and to arrange a visit.</p></li>
+          <li><b>You get an honest valuation or appraisal</b><p>A free sales valuation or rental appraisal based on your property, your area and what you want to achieve.</p></li>
+        </ol>
+        <a class="btn btn-mint next-cta" href="#valuation" data-intent="sell"><svg class="ic"><use href="#i-bolt"/></svg> Start my free valuation</a>
+      </div>
     </div>
   </section>
 
@@ -584,7 +624,7 @@
       <p>Free sales valuations and rental appraisals, from a local expert near you.</p>
       <div class="row center">
         <a class="btn btn-mint" href="#valuation">Get my free valuation</a>
-        <a class="btn btn-ghost" href="https://valuation.mypropertybox.co.uk/home/3843" target="_blank" rel="noopener">Instant valuation in 39 seconds</a>
+        <a class="btn btn-ghost" href="https://valuation.mypropertybox.co.uk/home/3843" target="_blank" rel="noopener">Instant online valuation</a>
       </div>
     </div>
   </section>
@@ -656,7 +696,11 @@
   </form>
 </dialog>
 
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script src="common.js"></script>
 <script src="script.js"></script>
+<script src="listing.js"></script>
+<script src="home.js"></script>
 </body>
 </html>

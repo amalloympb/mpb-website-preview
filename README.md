@@ -57,20 +57,38 @@ The property page can offer real viewing times based on the negotiators' diaries
 
 ## Property feed
 
-Rightmove only accepts listings pushed to it, so it cannot be read from. The listings come from the
-CRMs (Jupix, Veco, MRI) instead. `feed/sync.js` writes `data/properties.json` (search) and
-`data/p/<id>.json` (one file per property page).
+`feed/sync.js` writes `data/properties.json` (search) and `data/p/<id>.json` (one file per property page)
+from two sources, merged and de-duplicated:
+
+- **`site`**: the live mypropertybox.co.uk listings, which already merge the CRMs (Jupix, Veco, MRI).
+- **`rightmove`**: the public Rightmove branch pages for **Carlisle (90144)** and **Penrith (90147)**: sales
+  (including sold STC) and lettings (including let agreed), with photos, floorplans, EPC, key features and 360 tours.
+  Rightmove listings link back to their Rightmove page ("View on Rightmove").
 
 ```
-node feed/sync.js                 # default adapter: reads the live mypropertybox.co.uk site, which merges the CRMs
-node feed/sync.js --adapter=site
+node feed/sync.js                          # both sources
+node feed/sync.js --adapter=site           # one source only
+node --test feed/test/rightmove.test.js    # adapter tests
 ```
 
-- **Schedule it** (cron / Task Scheduler / GitHub Action), for example every 15 minutes, then publish `data/`.
-  A full first run takes about a minute; later runs only fetch changed listings (`feed/cache.json`).
-- **Direct CRM adapters** (Jupix, Veco, MRI, later Reapit): add a function to `ADAPTERS` in `feed/sync.js` that
-  returns `{ list, detail }` in the normalised shape described at the top of the file. These need each
-  vendor's API credentials and documentation.
+- **Refresh every 30 minutes.** `.github/workflows/pages.yml` runs `node feed/sync.js` on a `*/30 * * * *` schedule
+  and redeploys. Listings are not committed back, so the repo history stays small. A failed scheduled refresh
+  skips the deploy, so the live site keeps its last good data. On a push, a failed refresh falls back to the
+  committed `data/`. Run it on demand from the Actions tab (**Run workflow**).
+  - GitHub cron is best effort (runs can start a few minutes late) and GitHub switches scheduled workflows off
+    after 60 days with no repository activity.
+  - For Azure or self-hosting, run `node feed/sync.js` from cron or Task Scheduler instead.
+- **More Rightmove branches.** Set `RIGHTMOVE_BRANCHES="90144:Carlisle,90147:Penrith,<id>:<name>"`. The branch id is
+  the number at the end of the branch's Rightmove URL.
+- **Safe by design.** The Rightmove adapter identifies itself, waits at least 0.8s between requests, retries
+  politely and caches details. If Rightmove blocks a request, changes its page format or returns an incomplete
+  list, that branch keeps its previous listings (a `::warning::` appears on the Actions run) and nothing else is
+  affected. Listings kept this way are only as fresh as the last good run, so check the Actions log if the
+  Cumbria listings look out of date.
+- **Terms.** Rightmove's terms restrict automated collection of its site, and the page markup can change without
+  notice. Treat this as a stop-gap. The dependable source is your CRM's own feed (Reapit or Jupix for Cumbria),
+  added as another adapter in `ADAPTERS` in `feed/sync.js` that returns `{ list, detail }` in the normalised shape
+  described at the top of the file. That needs the vendor's API credentials and documentation.
 - Where a feed leaves the rent frequency blank, a rent under £300 is treated as weekly (student lets).
 
 ## Lead capture

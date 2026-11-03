@@ -6,21 +6,28 @@
     data/properties.json   one lightweight record per listing (search + cards + map)
     data/p/<id>.json       full detail per listing (gallery, highlights, description)
 
-  Rightmove cannot be used as a source: its datafeeds are push-only and its terms forbid scraping.
   The source of truth is the CRM (Jupix for sales, Veco for lettings, MRI for students/lettings), so every source is an
-  "adapter" that returns listings in the normalised shape below. Run this on a schedule (e.g. every 15 minutes):
+  "adapter" that returns listings in the normalised shape below. Run this on a schedule (the GitHub Pages workflow runs it
+  every 30 minutes; see README):
 
-      node feed/sync.js                  # full sync, details cached in feed/cache.json
-      node feed/sync.js --adapter=site   # (default) read the live mypropertybox.co.uk site, which already merges the CRMs
+      node feed/sync.js                            # default: site + rightmove, details cached in feed/cache.json
+      node feed/sync.js --adapter=site             # only the live mypropertybox.co.uk site, which already merges the CRMs
+      node feed/sync.js --adapter=site,rightmove   # explicit list
 
-  To add a direct CRM adapter (Jupix, Veco, MRI, Reapit), add a function to ADAPTERS that returns
-  { list: [Listing], detail: async (listing) => Detail } and select it with --adapter=<name>.
+  "rightmove" (feed/rightmove.js) reads the public Rightmove pages of our Cumbria branches (Carlisle, Penrith) until those
+  offices are in the CRM-backed site feed. Rightmove has no read API and restricts automated collection, so treat it as a
+  stop-gap and prefer a direct CRM adapter (Reapit / Jupix) when available. It never aborts the sync: if Rightmove is
+  unreachable the previous Rightmove listings are kept.
 
-  Listing: { id, source ('jupix'|'veco'|'mri'), section ('sales'|'lets'), students, url, address, town, hub, locality, lat, lng,
+  To add a direct CRM adapter, add a function to ADAPTERS that returns { list: [Listing], detail: async (listing) => Detail }
+  and select it with --adapter=<name>. Adapters other than "site" must not throw for a transient outage.
+
+  Listing: { id, source ('jupix'|'veco'|'mri'|'rightmove'), section ('sales'|'lets'), students, url, address, town, hub, locality, lat, lng,
              price, price_text, price_qualifier, price_freq, price_pcm, price_pppw, beds, type, category, status, rank,
              photo, photo_count, has_tour }
   Detail:  { id, photos[], floorplans[], highlights[], summary, description, tour, epc }
            tour = https URL of a 360 tour on an allow-listed provider (Giraffe360, Matterport, Kuula, Ricoh360) or ''.
+  Optional internal Listing fields (never published): _rev (changes when the listing is edited), _added, _keep (reuse cached detail).
 */
 'use strict';
 const fs = require('fs');
@@ -88,7 +95,7 @@ async function pool(items, size, fn) {
 
 // ---------- normalisation ----------
 const POSTCODE_TAIL = /\s*\b[A-Z]{1,2}\d{1,2}[A-Z]?(?:\s*\d[A-Z]{2})?$/i;
-const COUNTY = /^(?:count(?:r)?y durham|co\.? durham|durham county|north yorkshire|tyne (?:and|&) wear|cumbria|northumberland|west yorkshire|cleveland|teesside|tees valley|united kingdom|uk|england)$/i;
+const COUNTY = /^(?:count(?:r)?y durham|co\.? durham|durham county|north yorkshire|tyne (?:and|&) wear|cumbria|cumberland|westmorland (?:and|&) furness|northumberland|west yorkshire|cleveland|teesside|tees valley|dumfries (?:and|&) galloway|scottish borders|scotland|wales|united kingdom|uk|england)$/i;
 const STREETISH = /\b(?:road|street|avenue|lane|close|drive|view|way|terrace|crescent|place|grove|gardens|court|mews|square|row|walk|rise|park)$/i;
 const TOWN_ALIASES = { 'newcastle upon tyne': 'Newcastle upon Tyne', 'newcastle upoon tyne': 'Newcastle upon Tyne', newcastle: 'Newcastle upon Tyne', 'newcastle-upon-tyne': 'Newcastle upon Tyne', 'stockton on tees': 'Stockton-on-Tees', 'stockton-on-tees': 'Stockton-on-Tees', stockton: 'Stockton-on-Tees', 'chester-le-street': 'Chester Le Street' };
 
@@ -231,7 +238,7 @@ const UNICODE_NOISE = /[\u0900-\u097F]+/g; // stray Devanagari characters in som
 
 // Only these providers are embedded as a 360 tour / linked as an EPC; anything else in the CRM data is dropped.
 const TOUR_HOSTS = /^(?:tour\.giraffe360\.com|my\.matterport\.com|kuula\.co|view\.ricoh360\.com)$/;
-const EPC_HOSTS = /^(?:find-energy-certificate\.service\.gov\.uk|epc\.jupix\.co\.uk|media2\.jupix\.co\.uk)$/;
+const EPC_HOSTS = /^(?:find-energy-certificate\.service\.gov\.uk|epc\.jupix\.co\.uk|media2\.jupix\.co\.uk|media\.rightmove\.co\.uk)$/;
 
 // CRM links are hand-typed, so tolerate "www.https://...", "http://", stray whitespace and a swapped Tour/EPC label
 function cleanLink(raw) {
@@ -303,21 +310,70 @@ const ADAPTERS = {
     const list = mergeStudents(lists.flat());
     const detail = async l => parseDetail(await get(l.url), l);
     return { list, detail };
+  },
+  async rightmove({ prev }) {
+    const rm = require('./rightmove').create(helpers, { prev });
+    const { list } = await rm.list();
+    return { list, detail: rm.detail };
   }
 };
+const DEFAULT_ADAPTERS = 'site,rightmove';
+
+// Listings that arrive from more than one source (the same house on the CRM site and on Rightmove) are shown once: the first source wins
+function mergeSources(sources) {
+  const seenId = new Set(), seenAddr = new Set(), merged = [];
+  const addrKey = l => `${l.section === 'students' ? 'lets' : l.section}|${l.address.split(',')[0]}|${l.town || l.hub || ''}`.toLowerCase().replace(/[^a-z0-9|]+/g, '');
+  let dupes = 0;
+  sources.forEach((src, si) => {
+    for (const l of src.list) {
+      const k = addrKey(l);
+      if (seenId.has(l.id) || (si > 0 && seenAddr.has(k))) { dupes++; continue; }
+      seenId.add(l.id);
+      merged.push({ ...l, _src: si });
+    }
+    for (const l of src.list) seenAddr.add(addrKey(l));
+  });
+  if (dupes) console.log(`Skipped ${dupes} listing(s) already provided by an earlier source`);
+  // Interleave sources by relative recency so the newest Cumbria and North East listings both lead "Newest first"
+  const bySection = new Map();
+  for (const l of merged) { if (!bySection.has(l.section)) bySection.set(l.section, []); bySection.get(l.section).push(l); }
+  for (const group of bySection.values()) {
+    const size = new Map();
+    for (const l of group) size.set(l._src, (size.get(l._src) || 0) + 1);
+    group.sort((a, b) => a._src - b._src || a.rank - b.rank);
+    const seen = new Map();
+    for (const l of group) { const n = seen.get(l._src) || 0; seen.set(l._src, n + 1); l._pos = (n + 0.5) / size.get(l._src); }
+    group.sort((a, b) => a._pos - b._pos || a._src - b._src).forEach((l, i) => { l.rank = i; });
+  }
+  return merged.map(({ _src, _pos, ...l }) => l);
+}
+
+function readPrevious() {
+  try { return JSON.parse(fs.readFileSync(path.join(OUT, 'properties.json'), 'utf8')).properties || []; } catch (e) { return []; }
+}
+
+const helpers = { UA, sleep, pool, decode, text, tidy, parseAddress, parsePrice, parseType, categoryOf, nearestHub, canonTour, TOUR_HOSTS, EPC_HOSTS };
+module.exports = { ...helpers, mergeSources, mergeStudents, inferType };
 
 // ---------- main ----------
-(async () => {
-  const name = args.adapter || 'site';
-  if (!ADAPTERS[name]) throw new Error(`Unknown adapter "${name}". Available: ${Object.keys(ADAPTERS).join(', ')}`);
+async function main() {
+  const names = String(args.adapter === true ? DEFAULT_ADAPTERS : args.adapter || DEFAULT_ADAPTERS).split(',').map(s => s.trim()).filter(Boolean);
+  const bad = names.find(n => !ADAPTERS[n]);
+  if (bad) throw new Error(`Unknown adapter "${bad}". Available: ${Object.keys(ADAPTERS).join(', ')}`);
   const started = Date.now();
-  const { list, detail } = await ADAPTERS[name]();
-  console.log(`Listings: ${list.length} (${SECTIONS.map(s => s + ' ' + list.filter(l => l.section === s).length).join(', ')})`);
+  const prev = readPrevious();
+  const sources = [];
+  for (const n of names) sources.push(await ADAPTERS[n]({ prev }));
+  const list = mergeSources(sources);
+  const detailOf = new Map();
+  sources.forEach(s => s.list.forEach(l => { if (!detailOf.has(l.id)) detailOf.set(l.id, s.detail); }));
+  const detail = l => detailOf.get(l.id)(l);
+  console.log(`Listings: ${list.length} (${SECTIONS.map(s => s + ' ' + list.filter(l => l.section === s).length).join(', ')}${names.includes('rightmove') ? `; ${list.filter(l => l.source === 'rightmove').length} from Rightmove` : ''})`);
 
   let cache = {};
   try { cache = JSON.parse(fs.readFileSync(CACHE, 'utf8')); } catch (e) {}
-  const sig = l => [DETAIL_V, l.price_text, l.status, l.photo, l.address, l.type].join('|');
-  const todo = list.filter(l => !cache[l.id] || cache[l.id].sig !== sig(l));
+  const sig = l => [DETAIL_V, l.price_text, l.status, l.photo, l.address, l.type, ...(l._rev ? [l._rev] : [])].join('|');
+  const todo = list.filter(l => !l._keep && (!cache[l.id] || cache[l.id].sig !== sig(l)));
   console.log(`Fetching ${todo.length} detail pages (${list.length - todo.length} unchanged, cached)`);
 
   let failed = 0;
@@ -331,9 +387,10 @@ const ADAPTERS = {
   for (const id of Object.keys(cache)) if (!live.has(id)) delete cache[id];
   for (const f of fs.readdirSync(DETAIL_DIR)) if (!live.has(f.replace(/\.json$/, ''))) fs.unlinkSync(path.join(DETAIL_DIR, f));
 
+  const internal = ({ _rev, _added, _keep, ...pub }) => pub;
   const out = list.map(l => {
     const d = cache[l.id] && cache[l.id].detail;
-    const full = inferType(l, d);
+    const full = internal(inferType(l, d));
     if (d) {
       fs.writeFileSync(path.join(DETAIL_DIR, l.id + '.json'), JSON.stringify(d));
       return { ...full, photo_count: d.photos.length || l.photo_count, has_tour: !!d.tour };
@@ -342,8 +399,10 @@ const ADAPTERS = {
   });
 
   const tmp = path.join(OUT, 'properties.json.tmp');
-  fs.writeFileSync(tmp, JSON.stringify({ generated: new Date().toISOString(), adapter: name, count: out.length, properties: out }));
+  fs.writeFileSync(tmp, JSON.stringify({ generated: new Date().toISOString(), adapter: names.join(','), count: out.length, properties: out }));
   fs.renameSync(tmp, path.join(OUT, 'properties.json'));
   fs.writeFileSync(CACHE, JSON.stringify(cache));
   console.log(`Wrote data/properties.json (${out.length}) in ${((Date.now() - started) / 1000).toFixed(1)}s${failed ? `, ${failed} detail pages failed (will retry next run)` : ''}`);
-})().catch(e => { console.error('SYNC FAILED:', e.message); process.exit(1); });
+}
+
+if (require.main === module) main().catch(e => { console.error('SYNC FAILED:', e.message); process.exit(1); });

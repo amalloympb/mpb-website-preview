@@ -22,7 +22,10 @@ test.after(() => { server.close(); fs.rmSync(process.env.DATA_DIR, { recursive: 
 
 const get = p => fetch(base + p);
 const post = (body, headers = {}) => fetch(base + '/api/viewings', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) });
-const PID = '56D453AF-3';
+const FEED = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'data', 'properties.json'), 'utf8')).properties;
+// The feed changes as properties are let or sold, so pick a bookable one rather than pinning an id.
+const BOOKABLE = FEED.filter(p => p.source !== 'rightmove' && p.status === 'available' && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+const PID = BOOKABLE[0].id, PID2 = BOOKABLE[1].id;
 const person = { name: 'Test Person', email: 'test@example.com', phone: '07700 900123', consent: true, consent_statement: 'I agree' };
 
 test('static: site files are served, private files are not', async () => {
@@ -87,9 +90,9 @@ test('booking: validation, honeypot, success, double-booking and holds', async (
 });
 
 test('booking: concurrent requests for one slot yield exactly one booking', async () => {
-  const j = await (await get('/api/availability?property=100990007665')).json();
+  const j = await (await get('/api/availability?property=' + PID2)).json();
   const start = j.days[1].slots[2].start;
-  const rs = await Promise.all([1, 2, 3].map(() => post({ property: '100990007665', start, ...person })));
+  const rs = await Promise.all([1, 2, 3].map(() => post({ property: PID2, start, ...person })));
   assert.deepEqual(rs.map(r => r.status).sort(), [200, 409, 409]);
 });
 
