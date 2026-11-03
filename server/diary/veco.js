@@ -14,7 +14,7 @@ const cfg = () => ({
   identity: (process.env.VECO_IDENTITY_URL || 'https://identity.all.veco.plus').replace(/\/$/, ''),
   id: process.env.VECO_CLIENT_ID || '',
   secret: process.env.VECO_CLIENT_SECRET || '',
-  scope: process.env.VECO_SCOPE || '',
+  scope: process.env.VECO_SCOPE || 'scheduler-service',
   token: process.env.VECO_TOKEN || '',
   resources: (process.env.VECO_RESOURCE_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
 });
@@ -80,4 +80,18 @@ async function getBusy({ fresh } = {}) {
   return { negotiators: await fetchPool(!!fresh) };
 }
 
-module.exports = { name: 'veco', configured, getBusy };
+const hasCredentials = () => { const c = cfg(); return !!(c.token || (c.id && c.secret)); };
+
+// Staff (context 1), offices (2) or areas (3) known to the Veco scheduler. veco-check uses this to find VECO_RESOURCE_IDS.
+async function listResources(context = 1) {
+  const c = cfg();
+  const res = await fetch(`${c.base}/api/scheduler/Appointments/resources/?context=${Number(context)}`, {
+    headers: { Authorization: 'Bearer ' + (await token(c)) },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!res.ok) throw new Error(`Veco resources request failed (${res.status})`);
+  const j = await res.json();
+  return (j.resources || []).map(r => ({ id: r.id, title: r.title }));
+}
+
+module.exports = { name: 'veco', configured, hasCredentials, listResources, getBusy };

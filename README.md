@@ -63,7 +63,7 @@ The property page can offer real viewing times based on the negotiators' diaries
 | Source | State |
 |---|---|
 | Demo (`DIARY_MODE=demo`) | Deterministic sample diaries, clearly labelled "Demo availability" on the page |
-| Veco | Read-only adapter built from the Veco Plus scheduler API. Needs an API client from Veco (`VECO_CLIENT_ID`, `VECO_CLIENT_SECRET`, `VECO_RESOURCE_IDS`). Token flow is unverified until Veco issues one |
+| Veco | Read-only adapter built from the Veco Plus scheduler API, used only for properties whose feed `source` is `veco`. Veco's identity server advertises the `client_credentials` grant and the `scheduler-service` scope, but a client must be issued by Veco (`VECO_CLIENT_ID`, `VECO_CLIENT_SECRET`). Then run `node server/veco-check.js` to confirm the token and list the staff ids for `VECO_RESOURCE_IDS`. Bookings are still recorded as requests, not written into the Veco diary (needs Veco's create-appointment or lead endpoint) |
 | Jupix, MRI, Cumbria offices | No adapter yet (needs their API access); these properties fall back to the plain enquiry form |
 
   Add a source by creating `server/diary/<name>.js` that exports `{ name, configured(), getBusy({ fresh }) }`
