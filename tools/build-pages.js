@@ -128,16 +128,16 @@ const ctaBand = (h2, p, primary, second) => `  <section class="cta lp-cta tn-qui
   </section>`;
 
 // ---- Lead form shared by town and service pages (behaviour lives in town.js) ----
-const leadForm = o => `      <form class="wz lp-card" id="get-started" data-source="${o.source}"${o.town ? ` data-town="${esc(o.town)}"` : ''}${o.office ? ` data-office="${esc(o.office)}"` : ''} novalidate aria-label="${esc(o.label)}">
+const leadForm = o => `      <form class="wz lp-card" id="get-started" data-source="${o.source}"${o.town ? ` data-town="${esc(o.town)}"` : ''}${o.office ? ` data-office="${esc(o.office)}"` : ''}${o.fixedCta ? ` data-label="${esc(o.fixedCta)}"` : ''} novalidate aria-label="${esc(o.label)}">
         <div class="wz-pane">
           <h3 tabindex="-1">${esc(o.heading)}</h3>
           <p class="wz-sub">${esc(o.sub)}</p>
           <div class="fgrid">
             ${o.intent}
-            <label class="fld full"><span class="lbl">Property postcode or town</span><span class="inp"><input type="text" name="location" value="${esc(o.location || '')}" placeholder="e.g. DL1 5NA" autocomplete="off" required data-msg="Please tell us where the property is."></span><span class="hint wz-cover" data-cover aria-live="polite"></span></label>
+            <label class="fld full"><span class="lbl">${esc(o.locLabel || 'Property postcode or town')}</span><span class="inp"><input type="text" name="location" value="${esc(o.location || '')}" placeholder="e.g. DL1 5NA" autocomplete="off"${o.locOptional ? '' : ' required data-msg="Please tell us where the property is."'}></span><span class="hint wz-cover" data-cover aria-live="polite"></span></label>
             <label class="fld full"><span class="lbl">Full name</span><span class="inp"><input type="text" name="name" autocomplete="name" required data-msg="Please enter your name."></span></label>
             <label class="fld"><span class="lbl">Email</span><span class="inp"><input type="email" name="email" autocomplete="email" inputmode="email" required data-v="email" data-msg="Please enter your email address."></span></label>
-            <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="Please enter a phone number so we can arrange your visit."></span></label>
+            <label class="fld"><span class="lbl">Phone</span><span class="inp"><input type="tel" name="phone" autocomplete="tel" inputmode="tel" required data-v="phone" data-msg="${esc(o.phoneMsg || 'Please enter a phone number so we can arrange your visit.')}"></span></label>
             <div class="fld full"><span class="lbl">Best way to reach you</span>
               <div class="chips chips-sm" role="radiogroup" aria-label="Preferred contact method">
                 <label class="chip"><input type="radio" name="contact_pref" value="phone" checked><span>Phone</span></label>
@@ -408,28 +408,33 @@ const faqLd = faq => ({
   '@context': 'https://schema.org', '@type': 'FAQPage',
   mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } }))
 });
-const benefit = ([ic, h, p, link]) => `<article><svg class="ic"><use href="#i-${ic}"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p>${link ? `<a class="more" href="${link[0]}">${esc(link[1])} <svg class="ic"><use href="#i-arrow"/></svg></a>` : ''}</article>`;
+const benefit = ([ic, h, p, link]) => `<article><svg class="ic"><use href="#i-${ic}"/></svg><h3>${esc(h)}</h3><p>${esc(p)}</p>${link ? `<a class="more" href="${link[0]}"${/^https?:/.test(link[0]) ? ' target="_blank" rel="noopener"' : ''}>${esc(link[1])} <svg class="ic"><use href="#i-arrow"/></svg></a>` : ''}</article>`;
 
-const servicePage = c => head({ title: c.title, desc: c.desc, file: c.file, ld: [faqLd(c.faq)] }) + `
+const servicePage = c => {
+  const toForm = c.form ? '#get-started' : 'index.html#valuation';
+  const html = head({ title: c.title, desc: c.desc, file: c.file, ld: [faqLd(c.faq)] }) + `
 <main id="main">
 
   <section class="hero lp-hero" id="start">
     ${HERO_IMG}
-    <div class="wrap hero-inner lp-grid">
+    <div class="wrap hero-inner${c.form ? ' lp-grid' : ''}">
       <div class="lp-copy">
         <p class="eyebrow">${c.eyebrow}</p>
         <h1>${c.h1}</h1>
         <p class="lead">${esc(c.lead)}</p>
         <ul class="lp-pts">
           ${c.pts.map(([ic, t]) => `<li><svg class="ic"><use href="#i-${ic}"/></svg>${t}</li>`).join('\n          ')}
-        </ul>
+        </ul>${c.form ? '' : `
+        <div class="row">
+          ${c.heroRow}
+        </div>`}
         ${MINI}
       </div>
-
+${c.form ? `
 ${leadForm(c.form)}
-    </div>
+` : ''}    </div>
   </section>
-${c.live || ''}
+${c.live || ''}${c.info ? `
   <section class="section" id="info" aria-labelledby="info-title">
     <div class="wrap">
       <header class="sec-head">
@@ -437,14 +442,14 @@ ${c.live || ''}
         <h2 id="info-title">${c.info.h2}</h2>
         <p class="sub">${esc(c.info.sub)}</p>
       </header>
-      <div class="lp-benefits">
+      <div class="lp-benefits${c.info.four ? ' four' : ''}">
         ${c.info.cards.map(benefit).join('\n        ')}
-      </div>
-      <p class="lp-tier-note">${esc(GENERAL)}</p>
+      </div>${c.info.note ? `
+      <p class="lp-tier-note">${esc(c.info.note)}</p>` : ''}
     </div>
   </section>
-
-  <section class="section alt" aria-label="Free appraisal">
+` : ''}${c.magnet ? `
+  <section class="section alt" aria-label="${esc(c.magnet.kicker)}">
     <div class="wrap">
       <div class="lp-magnet">
         <div>
@@ -453,13 +458,13 @@ ${c.live || ''}
           <p>${esc(c.magnet.p)}</p>
         </div>
         <div class="row">
-          <a class="btn btn-mint" href="#get-started">${esc(c.magnet.cta)}</a>
+          <a class="btn btn-mint" href="${toForm}">${esc(c.magnet.cta)}</a>
           <a class="btn btn-ghost" href="${c.magnet.second[0]}">${esc(c.magnet.second[1])}</a>
         </div>
       </div>
     </div>
   </section>
-${c.more ? `
+` : ''}${c.more ? `
   <section class="section" id="more" aria-labelledby="more-title">
     <div class="wrap">
       <header class="sec-head">
@@ -467,7 +472,7 @@ ${c.more ? `
         <h2 id="more-title">${c.more.h2}</h2>
         <p class="sub">${esc(c.more.sub)}</p>
       </header>
-      <div class="lp-benefits">
+      <div class="lp-benefits${c.more.four ? ' four' : ''}">
         ${c.more.cards.map(benefit).join('\n        ')}
       </div>
     </div>
@@ -477,7 +482,7 @@ ${c.more ? `
     <div class="wrap lp-faq-wrap">
       <header class="sec-head">
         <p class="kicker">Questions</p>
-        <h2 id="faq-title">Before you <em>decide.</em></h2>
+        <h2 id="faq-title">${c.faqH2 || 'Before you <em>decide.</em>'}</h2>
         <p class="sub">${esc(c.faqSub)}</p>
       </header>
       <div>
@@ -490,10 +495,27 @@ ${c.more ? `
 
 ${ctaBand(c.cta.h2, c.cta.p, c.cta.primary, c.cta.second)}
 </main>
-` + tail('#get-started');
+` + tail(toForm);
+  // Pages without a form send the header and floating buttons to the homepage valuation form
+  return c.form ? html : html.replace(/href="#get-started"/g, 'href="index.html#valuation"');
+};
 
 const CALL_US = '<button type="button" data-call>Call your local office</button>';
 const hiddenIntent = v => `<input type="hidden" name="intent" value="${v}">`;
+
+const officeCards = () => OFFICES.map(o => {
+  const own = bySlug[o.id];
+  return `<article class="tn-card">
+          <p class="kicker">${esc(o.name)} office</p>
+          <h3>${esc(o.area.replace(/ & /g, ' and '))}</h3>
+          <a class="tn-phone" href="tel:${tel(o.phone)}" data-office="${o.id}">${o.phone}</a>${own ? `
+          <ul class="tn-links">
+            <li><a href="${fileOf(own)}">Estate agents in ${esc(own.name)} <svg class="ic"><use href="#i-arrow"/></svg></a></li>
+          </ul>` : ''}
+        </article>`;
+}).join('\n        ');
+
+const REGISTERED = 'My Property Box Ltd is registered in England & Wales. Registered office: Alton House, 27-31 Grange Road, Darlington, County Durham, DL1 5NA. Company number 08140860.';
 
 const SERVICE_PAGES = [
   {
@@ -515,7 +537,7 @@ const SERVICE_PAGES = [
       done: '<a class="btn btn-navy" href="landlords.html">Landlord services</a>\n            <a class="btn btn-line" href="landlords.html#health">Free compliance check</a>'
     },
     info: {
-      kicker: 'HMO essentials', h2: 'The essentials, <em>at a glance.</em>',
+      kicker: 'HMO essentials', note: GENERAL, h2: 'The essentials, <em>at a glance.</em>',
       sub: 'Requirements depend on your property and your council, so always check the details that apply to you.',
       cards: [
         ['key', 'Licensing', 'Larger HMOs need a mandatory licence, and many councils also run additional or selective licensing schemes. Rules differ by council, so check yours before you let.'],
@@ -586,7 +608,7 @@ const SERVICE_PAGES = [
   </section>
 `,
     info: {
-      kicker: 'For landlords', h2: 'Letting to students? <em>Know the basics.</em>',
+      kicker: 'For landlords', note: GENERAL, h2: 'Letting to students? <em>Know the basics.</em>',
       sub: 'A few things worth knowing before you let a property to students.',
       cards: [
         ['key', 'Tenancies and guarantors', 'Students often rent as a group. A joint tenancy makes everyone responsible for the whole rent, and many landlords ask for a guarantor.'],
@@ -610,6 +632,151 @@ const SERVICE_PAGES = [
       h2: 'Find a student home, <em>or let yours.</em>', p: 'Search our student properties, or ask for a free rental appraisal.',
       primary: '<a class="btn btn-mint" href="properties.html?section=students">Search student properties</a>',
       second: '<a class="btn btn-ghost" href="#get-started">Get my free appraisal</a>'
+    }
+  },
+  {
+    file: 'contact.html',
+    title: 'Contact Us | Offices & Phone Numbers | My Property Box',
+    desc: 'Contact your local My Property Box office. Call us, or send an enquiry about selling, letting, landlord services or renting a home.',
+    eyebrow: 'Contact us',
+    h1: 'Get in <em>touch.</em>',
+    lead: 'Call your local office, or send us an enquiry and the right local team will get back to you.',
+    pts: [
+      ['pin', 'Local offices across the North East, North Yorkshire and Cumbria'],
+      ['check', 'Free valuations and rental appraisals'],
+      ['home', 'Selling, letting, landlord services or renting: we can help']
+    ],
+    form: {
+      source: 'contact', label: 'Contact enquiry', heading: 'Send us an enquiry',
+      sub: 'Tell us how we can help and where to reach you.',
+      intent: `<div class="fld full"><span class="lbl">I am interested in</span>
+              <div class="chips chips-sm" role="radiogroup" aria-label="What can we help with">
+                <label class="chip"><input type="radio" name="intent" value="sell" required data-msg="Please choose what we can help with."><span>Selling</span></label>
+                <label class="chip"><input type="radio" name="intent" value="let"><span>Letting</span></label>
+                <label class="chip"><input type="radio" name="intent" value="manage"><span>Landlord services</span></label>
+                <label class="chip"><input type="radio" name="intent" value="rent"><span>Renting a home</span></label>
+                <label class="chip"><input type="radio" name="intent" value="other"><span>Something else</span></label>
+              </div>
+            </div>`,
+      locLabel: 'Postcode or town (optional)', locOptional: true,
+      phoneMsg: 'Please enter a phone number so we can get back to you.',
+      cta: 'Send my enquiry', fixedCta: 'Send my enquiry', call: CALL_US,
+      done: '<a class="btn btn-navy" href="properties.html">Search properties</a>\n            <a class="btn btn-line" href="areas.html">Areas we cover</a>'
+    },
+    live: `
+  <section class="section" id="offices" aria-labelledby="offices-title">
+    <div class="wrap">
+      <header class="sec-head">
+        <p class="kicker">Our offices</p>
+        <h2 id="offices-title">Call your <em>local team.</em></h2>
+        <p class="sub">Choose the office nearest to you, or the one that covers your area.</p>
+      </header>
+      <div class="tn-hubs">
+        ${officeCards()}
+      </div>
+      <p class="lp-tier-note">${esc(REGISTERED)}</p>
+    </div>
+  </section>
+`,
+    faqH2: 'Common <em>questions.</em>',
+    faqSub: 'Quick answers before you get in touch.',
+    faq: [
+      ['Which office should I contact?', 'Call the office closest to your property, or find the office for your area on our Areas we cover page.'],
+      ['How do I get a valuation?', 'Use the free valuation form on our homepage, or send an enquiry above. Your valuation or rental appraisal is free with no obligation.'],
+      ['Can I arrange a viewing online?', 'Yes. Open any property in our search and use the viewing request form. Your local team will confirm the time with you.'],
+      ['Where is your registered office?', REGISTERED]
+    ],
+    cta: {
+      h2: 'Prefer to <em>talk it through?</em>', p: 'Call your local office and speak to the team that covers your area.',
+      primary: '<button type="button" class="btn btn-mint" data-call>Call us</button>',
+      second: '<a class="btn btn-ghost" href="areas.html">Areas we cover</a>'
+    }
+  },
+  {
+    file: 'tenants.html',
+    title: 'Tenants | Homes to Rent & Student Properties | My Property Box',
+    desc: 'Find homes to rent and student properties across the North East, North Yorkshire and Cumbria, request a viewing online, or contact your local My Property Box office.',
+    eyebrow: 'Tenants',
+    h1: 'Find your next <em>rental.</em>',
+    lead: 'Search homes to rent across the North East, North Yorkshire and Cumbria, request a viewing online, or call your local office.',
+    pts: [
+      ['home', 'Search homes to rent, with photos and maps'],
+      ['cal', 'Request a viewing straight from any listing'],
+      ['users', 'Student properties shown with rent per person per week']
+    ],
+    heroRow: '<a class="btn btn-mint" href="properties.html?section=lets">Search properties to let</a>\n          <a class="btn btn-ghost" href="properties.html?section=students">Student properties</a>',
+    info: {
+      kicker: 'For tenants', h2: 'Everything for <em>renting.</em>', four: true,
+      sub: 'Find a home, get in touch, or make a payment.',
+      cards: [
+        ['search', 'Find a home', 'Search all of our properties to let, with photos, maps and key details.', ['properties.html?section=lets', 'Properties to let']],
+        ['users', 'Student properties', 'Browse student lets, with rent shown per person per week where available.', ['properties.html?section=students', 'Student properties']],
+        ['pin', 'Already renting with us?', 'Call the office that looks after your area. You will find every office number on our contact page.', ['contact.html#offices', 'Contact your office']],
+        ['key', 'Online payments', 'Use our online payments page. Not sure which payment applies to you? Call your local office.', ['https://www.mypropertybox.co.uk/payment.php', 'Online payments']]
+      ]
+    },
+    magnet: {
+      kicker: 'Landlord?', h2: 'Own a property you could <em>let out?</em>',
+      p: 'Get a free, no-obligation rental appraisal from your local team.',
+      cta: 'Get my free rental appraisal', second: ['landlords.html', 'Landlord services']
+    },
+    faqH2: 'Common <em>questions.</em>',
+    faqSub: 'Quick answers for tenants.',
+    faq: [
+      ['How do I arrange a viewing?', 'Open any property to let and use the viewing request form. Your local team will confirm the time with you.'],
+      ['How is rent shown?', 'Rent is usually shown per calendar month (pcm). Student properties are usually shown per person per week (pppw).'],
+      ['Who do I contact if I already rent with you?', 'Call your local office. You will find the number for your area on our contact page.'],
+      ['Where can I make an online payment?', 'Use our online payments page. If you are not sure which payment applies to you, please call your local office.']
+    ],
+    cta: {
+      h2: 'Find your next <em>home.</em>', p: 'Search our properties to let, or get in touch with your local office.',
+      primary: '<a class="btn btn-mint" href="properties.html?section=lets">Search properties to let</a>',
+      second: '<a class="btn btn-ghost" href="contact.html">Contact us</a>'
+    }
+  },
+  {
+    file: 'about.html',
+    title: 'About Us | Estate & Letting Agents | My Property Box',
+    desc: 'My Property Box is an estate and letting agency covering the North East, North Yorkshire and Cumbria, for homeowners, landlords and tenants.',
+    eyebrow: 'About us',
+    h1: 'Local estate and letting agents, <em>built around you.</em>',
+    lead: 'My Property Box is an estate and letting agency covering the North East, North Yorkshire and Cumbria, with a complete property service for homeowners, landlords and tenants.',
+    pts: [
+      ['home', 'Residential sales and lettings'],
+      ['key', 'Student accommodation and HMO property management'],
+      ['pin', 'Local teams across the North East, North Yorkshire and Cumbria']
+    ],
+    heroRow: '<a class="btn btn-mint" href="index.html#valuation">Get my free valuation</a>\n          <a class="btn btn-ghost" href="contact.html">Contact us</a>',
+    info: {
+      kicker: 'What we do', h2: 'A complete <em>property service.</em>', four: true,
+      sub: 'From marketing and maintenance to compliance and communication.',
+      cards: [
+        ['home', 'Sales', 'Free valuations, marketing on Rightmove and our own search, and 360\u00b0 virtual tours on sales listings where available.', ['sell.html', 'Sell with us']],
+        ['key', 'Lettings', 'Free rental appraisals and a choice of how much you want us to manage.', ['let.html', 'Let with us']],
+        ['shield', 'Landlord services', 'Compare our services, switch agents with minimal fuss, and check your rental is compliant.', ['landlords.html', 'Landlord services']],
+        ['users', 'Student and HMO', 'Student accommodation and HMO property management.', ['hmo.html', 'HMO landlords']]
+      ]
+    },
+    more: {
+      kicker: 'Local expertise, modern tools', h2: 'Technology that <em>helps.</em>', sub: 'Tools that make buying, selling, renting and letting simpler.',
+      cards: [
+        ['360', 'Property search and tours', 'Search homes to buy and rent, with maps and 360\u00b0 virtual tours on selected sales.', ['properties.html', 'Search properties']],
+        ['cal', 'Request a viewing online', 'Pick a property and request a viewing. Your local team will confirm the time with you.', ['properties.html', 'Find a property']],
+        ['calc', 'Free landlord calculators', 'Work out yields, costs and more, and email the results to yourself.', ['index.html#tools', 'Free calculators']]
+      ]
+    },
+    faqH2: 'Common <em>questions.</em>',
+    faqSub: 'A few quick answers about My Property Box.',
+    faq: [
+      ['Which areas do you cover?', 'We have offices in Darlington, Newcastle, Northallerton, Carlisle, Penrith and Kendal, and cover the towns around them. See our Areas we cover page for the full list.'],
+      ['Do you handle both sales and lettings?', 'Yes. We handle residential sales and lettings, as well as student accommodation and HMO property management.'],
+      ['Is the valuation free?', 'Yes. Your valuation or rental appraisal is free and there is no obligation to instruct us afterwards.'],
+      ['How can I speak to someone?', 'Call your local office or send an enquiry. You will find every office number on our contact page.']
+    ],
+    cta: {
+      h2: 'Let\u2019s talk about <em>your property.</em>', p: 'Free, no-obligation, and handled by your local team.',
+      primary: '<a class="btn btn-mint" href="index.html#valuation">Get my free valuation</a>',
+      second: '<button type="button" class="btn btn-ghost" data-call>Call us</button>'
     }
   }
 ];

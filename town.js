@@ -4,7 +4,11 @@
   const nav = $('#nav'), progress = $('#progress'), fab = $('#fab'), form = $('#get-started');
   const DONE_VIA = { phone: 'by phone', email: 'by email', text: 'by text message' };
   const LABEL = { sell: 'Get my free valuation', let: 'Get my free rental appraisal', manage: 'Get my free management review' };
-  const WHAT = { sell: 'to arrange your free valuation', let: 'to arrange your free rental appraisal', manage: 'to talk through your property management options' };
+  const WHAT = {
+    sell: 'to arrange your free valuation', let: 'to arrange your free rental appraisal', manage: 'to talk through your property management options',
+    rent: 'to help you find a home to rent', other: 'about your enquiry'
+  };
+  const WHAT_FALLBACK = 'about your enquiry';
 
   if (form) {
     const err = $('[data-err]', form), done = $('[data-done]', form);
@@ -18,7 +22,7 @@
       coverEl.textContent = area ? `\u2713 Great news \u2014 we have local experts covering ${area}.` : '';
       coverEl.classList.toggle('ok', !!area);
     };
-    const syncLabel = () => { btnTxt.textContent = LABEL[intent()]; };
+    const syncLabel = () => { btnTxt.textContent = form.dataset.label || LABEL[intent()] || 'Send my details'; };
 
     const setIntent = v => {
       const r = $(`input[name=intent][value=${v}]`, form);
@@ -51,7 +55,7 @@
       const showDone = preview => {
         const first = (d.name || '').split(/\s+/)[0];
         $('[data-done-title]', form).textContent = first ? `Thank you, ${first}` : 'Thank you';
-        $('[data-done-msg]', form).textContent = `We've got your details, and ${form.dataset.office ? `your local ${form.dataset.office} team` : 'a local expert'} will be in touch ${DONE_VIA[d.contact_pref] || ''} ${WHAT[d.intent]}.`.replace(/\s+/g, ' ');
+        $('[data-done-msg]', form).textContent = `We've got your details, and ${form.dataset.office ? `your local ${form.dataset.office} team` : 'a local expert'} will be in touch ${DONE_VIA[d.contact_pref] || ''} ${WHAT[d.intent] || WHAT_FALLBACK}.`.replace(/\s+/g, ' ');
         $('[data-preview]', form).hidden = !preview;
         form.classList.add('is-done');
         done.hidden = false;
