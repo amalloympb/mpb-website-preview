@@ -10,6 +10,8 @@ Static site. No build step.
 | `hmo.html`, `student.html` | HMO landlord guidance and lead form; live student listings and a rental-appraisal form |
 | `estate-agents-<town>.html`, `areas.html` | 16 town pages (local listings, nearest office, lead form, FAQ) and the "Areas we cover" index |
 | `contact.html`, `about.html`, `tenants.html` | Replace the old-site contact, about and tenants pages: enquiry form and office numbers, company overview, renting guide |
+| `privacy.html`, `cookies.html`, `terms.html`, `complaints.html` | Legal pages copied from the old site: privacy summary plus the full PDF (`assets/legal/privacy-policy.pdf`), cookies, website terms, in-house complaints procedure |
+| `careers.html`, `payments.html` | Careers (no vacancies listed) and online payments (card payment opens on the old site, bank transfer details) |
 | `properties.html` | Property search (grid, map, filters, saved homes, alerts) |
 | `property.html?id=<id>` | Property page: gallery, 360 tour, map, cost guide, viewing booking, lead capture |
 
@@ -17,7 +19,8 @@ The nav is deliberately short: Sell, Let, Landlord Services, Areas we Cover, Pro
 
 ### Generated pages
 
-The town pages, `areas.html`, `hmo.html`, `student.html`, `contact.html`, `about.html` and `tenants.html` are **generated**.
+The town pages, `areas.html`, `hmo.html`, `student.html`, `contact.html`, `about.html`, `tenants.html` and the six
+document pages (`privacy`, `cookies`, `terms`, `complaints`, `careers`, `payments`) are **generated**.
 Edit `tools/build-pages.js` (town list, copy, FAQs, office assignments), then run:
 
 ```
@@ -165,9 +168,21 @@ as plain markup, so update them there too if a number changes. Rightmove trackin
 - **Landlord service tiers** on `landlords.html` are a draft with no prices. Confirm what each tier includes.
 - **Compliance check and HMO/student guidance** is general England-based guidance marked "not legal advice". Have it
   reviewed.
-- **Still on the old site:** privacy, cookies, terms and complaints pages, careers, online payments and the instant
-  valuation tool (it sends `X-Frame-Options: SAMEORIGIN`, so it cannot be embedded; the hero form is the on-site
-  replacement). Move these before the old domain is switched off.
+- **Legal pages are copies of the old site's documents, not legal advice.** Have them reviewed before launch:
+  - Privacy: the page summarises the policy (last updated August 2024) and links the full PDF, which is hosted in
+    `assets/legal/`. Supply the Word version if you want a full HTML page.
+  - Cookies: the wording is outdated (it cites the Data Protection Act 1998, Flash, Olark and HitsLink) and the site
+    has no cookie consent banner. Rewrite it and add a banner.
+  - Terms: the old page headed one section "Winch & Co Holdings Ltd details", which looks like a template error. It
+    now reads "My Property Box Ltd details". Clause 22 ends "exclusive jurisdiction of the English and Welsh", which
+    looks truncated (probably missing "courts"). It is kept verbatim until confirmed.
+  - Payments: the card button still opens `mypropertybox.co.uk/payment.php`, and that form posts to a
+    `payments.handepay.co.uk/devtools/sigtest.php` URL, which looks like a test endpoint. Check it with Handepay and
+    your developer. The bank sort code and account number were copied from the old page and need confirming.
+  - Careers: says there are no vacancies. Add roles when there are some.
+- **Still on the old site:** the instant valuation tool (it sends `X-Frame-Options: SAMEORIGIN`, so it cannot be
+  embedded; the hero form is the on-site replacement) and the card payment form. Move these before the old domain is
+  switched off.
 - Add a `sitemap.xml`, `robots.txt` and the real canonical domain, and remove the `noindex` injection.
 
 - Set `LEAD.endpoint`. Alerts also need a back end (or CRM automation) to send the emails.

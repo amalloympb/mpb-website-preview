@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Generates the town and area landing pages (estate-agents-<slug>.html) and areas.html.
+// Generates the town and area landing pages (estate-agents-<slug>.html), areas.html, the HMO, student, contact,
+// about and tenants pages, and the legal, careers and payments pages.
 // The header, footer, icon sprite, hero image and trust logos are lifted from sell.html and properties.html,
 // and the office phone numbers from common.js, so the pages stay in step with the rest of the site.
 // Run from anywhere: node tools/build-pages.js
@@ -146,7 +147,7 @@ const leadForm = o => `      <form class="wz lp-card" id="get-started" data-sour
               </div>
             </div>
           </div>
-          <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box to confirm you're happy for us to contact you."><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box contacting me about this request. My details will be used as set out in the <a href="https://www.mypropertybox.co.uk/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
+          <label class="ck"><input type="checkbox" name="consent" value="yes" required data-msg="Please tick the box to confirm you're happy for us to contact you."><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>I agree to My Property Box contacting me about this request. My details will be used as set out in the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</small></span></label>
           <label class="ck"><input type="checkbox" name="marketing" value="yes"><span class="box"><svg class="ic"><use href="#i-check"/></svg></span><span class="ck-t"><small>Send me occasional property market updates. <em>(Optional)</em></small></span></label>
           <input type="text" name="company_website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
         </div>
@@ -712,7 +713,7 @@ const SERVICE_PAGES = [
         ['search', 'Find a home', 'Search all of our properties to let, with photos, maps and key details.', ['properties.html?section=lets', 'Properties to let']],
         ['users', 'Student properties', 'Browse student lets, with rent shown per person per week where available.', ['properties.html?section=students', 'Student properties']],
         ['pin', 'Already renting with us?', 'Call the office that looks after your area. You will find every office number on our contact page.', ['contact.html#offices', 'Contact your office']],
-        ['key', 'Online payments', 'Use our online payments page. Not sure which payment applies to you? Call your local office.', ['https://www.mypropertybox.co.uk/payment.php', 'Online payments']]
+        ['key', 'Online payments', 'Use our online payments page. Not sure which payment applies to you? Call your local office.', ['payments.html', 'Online payments']]
       ]
     },
     magnet: {
@@ -781,7 +782,253 @@ const SERVICE_PAGES = [
   }
 ];
 
+// ---- Document pages: legal text, careers and payments ----
+// Body copy is the wording published on the current mypropertybox.co.uk pages, kept as close to verbatim as possible.
+const slugify = s => s.replace(/<[^>]+>/g, '').replace(/&[a-z#0-9]+;/gi, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const docPage = c => {
+  const toc = [];
+  const body = c.body.replace(/<h2>([\s\S]*?)<\/h2>/g, (m, t) => {
+    const id = slugify(t);
+    toc.push([id, t]);
+    return `<h2 id="${id}">${t}</h2>`;
+  });
+  const hasToc = c.toc && toc.length >= 3;
+  const html = head({ title: c.title, desc: c.desc, file: c.file }) + `
+<main id="main">
+
+  <section class="hero lp-hero doc-hero" id="start">
+    ${HERO_IMG}
+    <div class="wrap hero-inner">
+      <div class="lp-copy">
+        <p class="eyebrow">${esc(c.eyebrow)}</p>
+        <h1>${c.h1}</h1>
+        <p class="lead">${esc(c.lead)}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-label="${esc(c.eyebrow)}">
+    <div class="wrap doc-wrap${hasToc ? ' has-toc' : ''}">${hasToc ? `
+      <nav class="doc-toc" aria-label="On this page">
+        <h2>On this page</h2>
+        <ol>
+          ${toc.map(([id, t]) => `<li><a href="#${id}">${t}</a></li>`).join('\n          ')}
+        </ol>
+      </nav>` : ''}
+      <div class="doc-body${c.wide ? ' wide' : ''}">
+${body}
+      </div>
+    </div>
+  </section>
+
+${ctaBand('Questions? <em>Talk to us.</em>', 'Your local team can help with anything on this page.', '<a class="btn btn-mint" href="contact.html">Contact us</a>', '<button type="button" class="btn btn-ghost" data-call>Call us</button>')}
+</main>
+` + tail('index.html#valuation');
+  return html.replace(/href="#get-started"/g, 'href="index.html#valuation"').replace(/[^\x00-\x7f]/g, ch => `&#${ch.codePointAt(0)};`);
+};
+
+const PRIVACY_SECTIONS = ['Who we are', 'What data we collect', 'How do we collect personal data', 'How we use personal data', 'Who we share your personal data with', 'Where we keep your data', 'Overseas transfers of your personal data', 'For how long we keep your data', 'Your rights in relation to your personal information', 'Complaints and contact details', 'Updates to this notice'];
+
+const DOC_PAGES = [
+  {
+    file: 'privacy.html', toc: false,
+    title: 'Privacy Policy | My Property Box',
+    desc: 'How My Property Box Ltd collects, uses and protects your personal data, and how to contact our data protection officer.',
+    eyebrow: 'Legal',
+    h1: 'Privacy <em>policy</em>',
+    lead: 'We are committed to the protection of personal data and take this very seriously.',
+    body: `        <p>This page summarises our privacy policy. The full policy is available to read or download as a PDF.</p>
+        <dl class="doc-facts">
+          <div><dt>Data controller</dt><dd>My Property Box Ltd, company number 08140860</dd></div>
+          <div><dt>Responsible for data protection</dt><dd>Operations Team, Alton House, 27-31 Grange Road, Darlington, County Durham, DL1 5NA</dd></div>
+          <div><dt>Data protection officer</dt><dd><a href="mailto:aidan@mypropertybox.co.uk">aidan@mypropertybox.co.uk</a></dd></div>
+          <div><dt>Last updated</dt><dd>August 2024</dd></div>
+        </dl>
+        <div class="row">
+          <a class="btn btn-navy" href="assets/legal/privacy-policy.pdf" target="_blank" rel="noopener">Read the full Privacy Policy (PDF)</a>
+        </div>
+        <h2>What the policy covers</h2>
+        <p>When we collect and use your personal information we are subject to the UK General Data Protection Regulation (UK GDPR) and the Data Protection Act 2018. For the purposes of these laws we are the controller of your personal data. The full policy sets out:</p>
+        <ol class="doc-list">
+          ${PRIVACY_SECTIONS.map((s, i) => `<li><b>${i + 1}</b><span>${s}</span></li>`).join('\n          ')}
+        </ol>
+        <h2>Complaints and contact details</h2>
+        <p>If you have any complaints about the way we use your personal data, please contact the data protection officer at <a href="mailto:aidan@mypropertybox.co.uk">aidan@mypropertybox.co.uk</a>, who will try to resolve the issue. If we cannot resolve it, you have the right to complain to the Information Commissioner&rsquo;s Office (ICO).</p>
+        <p>You can also write to the Data Protection Officer, My Property Box Ltd, 27 Grange Rd, Darlington DL1 5NA.</p>
+        <p>Our <a href="cookies.html">cookies policy</a> and <a href="terms.html">website terms of use</a> also apply to your use of this website.</p>`
+  },
+  {
+    file: 'cookies.html', toc: false,
+    title: 'Cookies Policy | My Property Box',
+    desc: 'How the My Property Box website uses cookies and how to control them in your browser.',
+    eyebrow: 'Legal',
+    h1: 'Cookies <em>policy</em>',
+    lead: 'We are committed to protecting your privacy.',
+    body: `        <h2>Privacy Policy</h2>
+        <p>We are committed to protecting your privacy. We will only use the information that we collect about you lawfully (in accordance with the Data Protection Act 1998 and the EU Privacy and Communications Directive). This includes information submitted voluntarily by you through a form or gathered automatically as you visit this website.</p>
+        <p>You should not submit any sensitive or private information through this website except through acknowledged secure areas. The owners of this website accept no responsibility for data submitted through insecure areas of this website.</p>
+        <p>By submitting your contact details to us, we may contact you or send you marketing materials. We will give you the chance to refuse any marketing email from us in the future.</p>
+        <h2>Our Use of Cookies</h2>
+        <p>This website uses cookies which are stored on your browser. You can usually modify your browser settings to prevent this happening. However, by disabling cookies, or certain types of cookie, you may hinder your user experience on this and other websites, or prevent them from working entirely.</p>
+        <p>The only way you can however disable ALL cookies from any website is to disable accepting cookies from them in your browser. Although we can&rsquo;t help you with that we do suggest consulting the Help section of your browser or taking a look at <a href="https://www.aboutcookies.org" target="_blank" rel="noopener nofollow">the About Cookies website</a> which offers guidance for all modern browsers section.</p>
+        <p>Some cookies used on this website are essential in order to enable you to move around the website and use its features, such as accessing secure areas of the website. Without these cookies, services you have asked for, like shopping baskets or e-billing, cannot be provided.</p>
+        <p>Some cookies used on this website collect information about how visitors use a website, for instance which pages visitors go to most often, and if they get error messages from web pages.</p>
+        <p>These cookies don&rsquo;t collect information that identifies a visitor. All information these cookies collect is aggregated and therefore anonymous. It is only used to improve how a website works.</p>
+        <p>Some cookies used on this website allow the website to remember choices you make (such as your user name, language or the region you are in) and provide enhanced, more personal features.</p>
+        <p>These cookies can also be used to remember changes you have made to text size, fonts and other parts of web pages that you can customise. They may also be used to provide services you have asked for such as watching a video or commenting on a blog. The information these cookies collect may be anonymised and they cannot track your browsing activity on other websites.</p>
+        <p>Cookies may also be used to improve the user experience and to enable some of the functionality provided by this website.</p>
+        <p>Please note that some cookies may be placed by third party service providers who perform some of these functions (or other services) for us. Cookies are used on this website for the following third party services: HitsLink Analytics, Google Analytics, LinkedIn Follow button, Facebook Like Button, Twitter Follow button, Google +1 button, AddThis social bookmarking tool, YouTube videos, Olark LiveChat Services, Macromedia Flash and there are many many more. Some of these services may be used to track your behaviour on other websites and we have no control over this.</p>
+        <p>By continuing to use this website without adjusting your browser&rsquo;s cookie settings, you agree that we can place these cookies on your device.</p>
+        <p>Don&rsquo;t forget, if you follow the help at <a href="https://www.aboutcookies.org" target="_blank" rel="noopener nofollow">the About Cookies website</a> then you should be able to view what cookies our site is using and you can then make up your mind whether or not you want to accept them or not, remember, you have the control and power to block cookies from ANY and ALL websites you visit using your browser.</p>
+        <p>As is true with most websites, our server will automatically log data regarding each visit such as your IP address, browser type, referring/exit pages, and operating system. We may use this information to monitor server errors, server administration or to monitor visitor behaviour. It is not possible for this to be disabled on a per-user basis so you must leave this website if you do not agree to this happening.</p>
+        <p>This privacy policy applies to this website only and does not apply to any websites that this website may link to.</p>
+        <p>If you have any questions/comments about privacy, you should <a href="contact.html">contact us</a>.</p>`
+  },
+  {
+    file: 'terms.html', toc: true,
+    title: 'Website Terms of Use | My Property Box',
+    desc: 'The terms and conditions that apply to your use of the My Property Box website.',
+    eyebrow: 'Legal',
+    h1: 'Website <em>terms of use</em>',
+    lead: 'Please read these terms and conditions carefully, as they affect your legal rights.',
+    body: `        <p>These terms and conditions apply between you, the User of this Website (including any sub-domains, unless expressly excluded by their own terms and conditions), and My Property Box Ltd, the owner and operator of this Website. Please read these terms and conditions carefully, as they affect your legal rights. Your agreement to comply with and be bound by these terms and conditions is deemed to occur upon your first use of the Website. If you do not agree to be bound by these terms and conditions, you should stop using the Website immediately.</p>
+        <p>In these terms and conditions, <strong>User</strong> or <strong>Users</strong> means any third party that accesses the Website and is not either (i) employed by My Property Box Ltd and acting in the course of their employment or (ii) engaged as a consultant or otherwise providing services to My Property Box Ltd and accessing the Website in connection with the provision of such services.</p>
+        <p>You must be at least 18 years of age to use this Website. By using the Website and agreeing to these terms and conditions, you represent and warrant that you are at least 18 years of age.</p>
+        <h2>Intellectual property and acceptable use</h2>
+        <ol>
+          <li>All Content included on the Website, unless uploaded by Users, is the property of My Property Box Ltd, our affiliates or other relevant third parties. In these terms and conditions, Content means any text, graphics, images, audio, video, software, data compilations, page layout, underlying code and software and any other form of information capable of being stored in a computer that appears on or forms part of this Website, including any such content uploaded by Users. By continuing to use the Website you acknowledge that such Content is protected by copyright, trademarks, database rights and other intellectual property rights. Nothing on this site shall be construed as granting, by implication, estoppel, or otherwise, any license or right to use any trademark, logo or service mark displayed on the site without the owner&rsquo;s prior written permission</li>
+          <li>You may, for your own personal, non-commercial use only, do the following:
+            <ul><li>retrieve, display and view the Content on a computer screen</li></ul>
+          </li>
+          <li>You must not otherwise reproduce, modify, copy, distribute or use for commercial purposes any Content without the written permission of My Property Box Ltd.</li>
+        </ol>
+        <h2>Prohibited use</h2>
+        <ol start="4">
+          <li>You may not use the Website for any of the following purposes:
+            <ol>
+              <li>in any way which causes, or may cause, damage to the Website or interferes with any other person&rsquo;s use or enjoyment of the Website;</li>
+              <li>in any way which is harmful, unlawful, illegal, abusive, harassing, threatening or otherwise objectionable or in breach of any applicable law, regulation, governmental order;</li>
+              <li>making, transmitting or storing electronic copies of Content protected by copyright without the permission of the owner.</li>
+            </ol>
+          </li>
+        </ol>
+        <h2>Links to other websites</h2>
+        <ol start="5">
+          <li>This Website may contain links to other sites. Unless expressly stated, these sites are not under the control of My Property Box Ltd or that of our affiliates.</li>
+          <li>We assume no responsibility for the content of such Websites and disclaim liability for any and all forms of loss or damage arising out of the use of them.</li>
+          <li>The inclusion of a link to another site on this Website does not imply any endorsement of the sites themselves or of those in control of them.</li>
+        </ol>
+        <h2>Privacy Policy and Cookies Policy</h2>
+        <ol start="8">
+          <li>Use of the Website is also governed by our <a href="privacy.html">Privacy Policy</a> and <a href="cookies.html">Cookies Policy</a>, which are incorporated into these terms and conditions by this reference.</li>
+        </ol>
+        <h2>Availability of the Website and disclaimers</h2>
+        <ol start="9">
+          <li>Any online facilities, tools, services or information that My Property Box Ltd makes available through the Website (the Service) is provided &quot;as is&quot; and on an &quot;as available&quot; basis. We give no warranty that the Service will be free of defects and/or faults. To the maximum extent permitted by the law, we provide no warranties (express or implied) of fitness for a particular purpose, accuracy of information, compatibility and satisfactory quality. My Property Box Ltd is under no obligation to update information on the Website.</li>
+          <li>Whilst My Property Box Ltd uses reasonable endeavours to ensure that the Website is secure and free of errors, viruses and other malware, we give no warranty or guaranty in that regard and all Users take responsibility for their own security, that of their personal details and their computers.</li>
+          <li>My Property Box Ltd accepts no liability for any disruption or non-availability of the Website.</li>
+          <li>My Property Box Ltd reserves the right to alter, suspend or discontinue any part (or the whole of) the Website including, but not limited to, any products and/or services available. These terms and conditions shall continue to apply to any modified version of the Website unless it is expressly stated otherwise.</li>
+        </ol>
+        <h2>Limitation of liability</h2>
+        <ol start="13">
+          <li>Nothing in these terms and conditions will: (a) limit or exclude our or your liability for death or personal injury resulting from our or your negligence, as applicable; (b) limit or exclude our or your liability for fraud or fraudulent misrepresentation; or (c) limit or exclude any of our or your liabilities in any way that is not permitted under applicable law.</li>
+          <li>We will not be liable to you in respect of any losses arising out of events beyond our reasonable control.</li>
+          <li>To the maximum extent permitted by law, My Property Box Ltd accepts no liability for any of the following:
+            <ol>
+              <li>any business losses, such as loss of profits, income, revenue, anticipated savings, business, contracts, goodwill or commercial opportunities;</li>
+              <li>loss or corruption of any data, database or software;</li>
+              <li>any special, indirect or consequential loss or damage.</li>
+            </ol>
+          </li>
+        </ol>
+        <h2>General</h2>
+        <ol start="16">
+          <li>You may not transfer any of your rights under these terms and conditions to any other person. We may transfer our rights under these terms and conditions where we reasonably believe your rights will not be affected.</li>
+          <li>These terms and conditions may be varied by us from time to time. Such revised terms will apply to the Website from the date of publication. Users should check the terms and conditions regularly to ensure familiarity with the then current version.</li>
+          <li>These terms and conditions together with the Privacy Policy and Cookies Policy contain the whole agreement between the parties relating to its subject matter and supersede all prior discussions, arrangements or agreements that might have taken place in relation to the terms and conditions.</li>
+          <li>The Contracts (Rights of Third Parties) Act 1999 shall not apply to these terms and conditions and no third party will have any right to enforce or rely on any provision of these terms and conditions.</li>
+          <li>If any court or competent authority finds that any provision of these terms and conditions (or part of any provision) is invalid, illegal or unenforceable, that provision or part-provision will, to the extent required, be deemed to be deleted, and the validity and enforceability of the other provisions of these terms and conditions will not be affected.</li>
+          <li>Unless otherwise agreed, no delay, act or omission by a party in exercising any right or remedy will be deemed a waiver of that, or any other, right or remedy.</li>
+          <li>This Agreement shall be governed by and interpreted according to the law of England and Wales and all disputes arising under the Agreement (including non-contractual disputes or claims) shall be subject to the exclusive jurisdiction of the English and Welsh.</li>
+        </ol>
+        <h2>My Property Box Ltd details</h2>
+        <ol start="23">
+          <li>My Property Box Ltd is a company incorporated in England and Wales with registered number 08140860 whose registered address is 27 Grange Rd, Darlington DL1 5NA and it operates the Website mypropertybox.co.uk.</li>
+        </ol>
+        <p>You can contact My Property Box Ltd by email on <a href="mailto:info@mypropertybox.co.uk">info@mypropertybox.co.uk</a></p>`
+  },
+  {
+    file: 'complaints.html', toc: false,
+    title: 'Complaints Procedure | My Property Box',
+    desc: 'How to make a complaint to My Property Box, what happens next, and how to contact The Property Ombudsman.',
+    eyebrow: 'Legal',
+    h1: 'In-house <em>complaints procedure</em>',
+    lead: 'We are committed to providing a professional service to all our clients and customers. When something goes wrong, we need you to tell us about it.',
+    body: `        <p>This will help us to improve our standards.</p>
+        <p>If you have a complaint, please put it in writing (email accepted to <a href="mailto:contact@mypropertybox.co.uk">contact@mypropertybox.co.uk</a>), including as much detail as possible. We will then respond in line with the timeframes set out below (if you feel we have not sought to address your complaints within eight weeks, you may be able to refer your complaint to the Property Ombudsman to consider without our final viewpoint on the matter).</p>
+        <h2>What will happen next?</h2>
+        <ul>
+          <li>We will send you a letter or email acknowledging receipt of you complaint within three working days of receiving it, enclosing a copy of this procedure.</li>
+          <li>We will then investigate your complaint. This will normally be dealt with by the office manager who will review your file and speak to the member of staff who dealt with you. A formal written outcome of our investigation will be sent to you within 15 working days of sending the acknowledgement letter.</li>
+          <li>If, at this stage, you are still not satisfied, you should contact us again and we will arrange for a separate review to take place by a senior member of staff.</li>
+          <li>We will write to you within 15 working days of receiving your request for a review, confirming our final viewpoint on the matter.</li>
+        </ul>
+        <p>If you still remain dissatisfied, you can then contact The Property Ombudsman to request an independent review:</p>
+        <address>The Property Ombudsman Ltd<br>Milford House<br>43-45 Milford Street<br>Salisbury<br>Wiltshire<br>SP1 2BP<br><a href="tel:+441722333306">01722 333 306</a><br><a href="https://www.tpos.co.uk" target="_blank" rel="noopener">www.tpos.co.uk</a></address>
+        <p>Please note the following:</p>
+        <p>You will need to submit your complaint to The Property Ombudsman within 12 months of receiving our final viewpoint letter, including any evidence to support your case.</p>
+        <p>The Property Ombudsman requires that all complaints are addressed through this in-house complaints procedure, before being submitted for an independent review.</p>`
+  },
+  {
+    file: 'careers.html', toc: false,
+    title: 'Careers | My Property Box',
+    desc: 'Careers at My Property Box, an estate and letting agency across the North East, North Yorkshire and Cumbria.',
+    eyebrow: 'Careers',
+    h1: 'Careers at <em>My Property Box</em>',
+    lead: 'Are you looking to join one of the leading lettings and estate agencies in the North East and North Yorkshire? Look no further than My Property Box.',
+    body: `        <h2>Training</h2>
+        <p>All of our staff are trained weekly, ranging from single lets to HMOs, <abbr title="Serviced accommodation">SA</abbr>, <abbr title="Rent to rent">R2R</abbr>, or commercial to residential conversions. Along with the ever-changing legislation that comes with the property industry.</p>
+        <h2>Current vacancies</h2>
+        <p class="doc-note">We don&rsquo;t have any job vacancies at the moment.</p>
+        <p>If you would like to get in touch, you will find every office on our contact page.</p>
+        <div class="row">
+          <a class="btn btn-navy" href="contact.html">Contact us</a>
+        </div>`
+  },
+  {
+    file: 'payments.html', toc: false, wide: true,
+    title: 'Online Payments | My Property Box',
+    desc: 'Pay My Property Box by debit or credit card through our secure payment form, or by bank transfer.',
+    eyebrow: 'Tenants',
+    h1: 'Online <em>payments</em>',
+    lead: 'Pay by debit or credit card, or transfer the money directly from your bank account.',
+    body: `        <div class="doc-split">
+          <article class="doc-card">
+            <p class="kicker">Debit or credit card</p>
+            <h2>Pay by card</h2>
+            <p>For a one-off payment by debit card or credit card, use our secure payment form. It opens on our main website, where you choose the payment type: deposit, rent or other.</p>
+            <a class="btn btn-navy" href="https://www.mypropertybox.co.uk/payment.php" target="_blank" rel="noopener">Pay by card</a>
+          </article>
+          <article class="doc-card">
+            <p class="kicker">Bank transfer</p>
+            <h2>Pay directly into our account</h2>
+            <p>If you prefer to pay directly from your bank account, you can pay into our bank using these details.</p>
+            <dl class="doc-facts big">
+              <div><dt>Sort code</dt><dd>20-25-29</dd></div>
+              <div><dt>Account number</dt><dd>33775119</dd></div>
+            </dl>
+          </article>
+        </div>
+        <p class="doc-note">Not sure which payment applies to you? Call your local office before you pay.</p>
+        <div class="row">
+          <button type="button" class="btn btn-line" data-call>Call your local office</button>
+        </div>`
+  }
+];
+
 PAGES.forEach(p => write(fileOf(p), townPage(p)));
 SERVICE_PAGES.forEach(c => write(c.file, servicePage(c)));
+DOC_PAGES.forEach(c => write(c.file, docPage(c)));
 write('areas.html', areasPage());
-console.log(`Wrote ${PAGES.length} town pages, ${SERVICE_PAGES.length} service pages and areas.html`);
+console.log(`Wrote ${PAGES.length} town pages, ${SERVICE_PAGES.length} service pages, ${DOC_PAGES.length} document pages and areas.html`);
