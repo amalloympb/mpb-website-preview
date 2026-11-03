@@ -57,9 +57,9 @@ html[data-theme=dark] .lp-benefits article{--spot:rgba(145,209,185,.14)}
 
 /* AREAS */
 .lp-areas{display:flex;flex-wrap:wrap;gap:12px}
-.lp-areas button{display:inline-flex;align-items:center;gap:10px;padding:15px 22px;background:var(--surface);color:var(--head);border:1px solid var(--line);font:500 .74rem Roboto,sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .3s,border-color .3s,color .3s,transform .3s}
-.lp-areas button .ic{width:16px;height:16px;color:var(--acc)}
-.lp-areas button:hover{border-color:var(--acc);transform:translateY(-2px)}
+.lp-areas button,.lp-areas a{display:inline-flex;align-items:center;gap:10px;padding:15px 22px;background:var(--surface);color:var(--head);border:1px solid var(--line);font:500 .74rem Roboto,sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .3s,border-color .3s,color .3s,transform .3s}
+.lp-areas button .ic,.lp-areas a .ic{width:16px;height:16px;color:var(--acc)}
+.lp-areas button:hover,.lp-areas a:hover{border-color:var(--acc);transform:translateY(-2px)}
 .lp-areas-note{margin-top:22px;color:var(--muted);font-size:.95rem}
 
 /* FAQ */

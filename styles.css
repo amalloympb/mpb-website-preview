@@ -198,6 +198,7 @@ h1{font-size:clamp(3rem,5.8vw,5.6rem);line-height:1;letter-spacing:-.018em;max-w
 @media(min-width:1021px){.areas-split{align-items:stretch}.areas-split .ph{aspect-ratio:auto;min-height:520px}}
 .areas-split .sec-head{margin-bottom:40px}
 .area-list{list-style:none;border-top:1px solid var(--line)}
+.area-all{margin-top:32px}
 .area-list a{display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 20px;padding:28px 0;border-bottom:1px solid var(--line)}
 .area-list b{font:500 clamp(1.7rem,2.5vw,2.3rem)/1.12 var(--serif);color:var(--head);transition:color .3s,transform .5s cubic-bezier(.2,.7,.2,1)}
 .area-list small{grid-column:1;margin-top:4px;color:var(--muted);font-size:.92rem}
