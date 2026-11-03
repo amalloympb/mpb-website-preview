@@ -240,7 +240,10 @@ html[data-theme=dark] .pp-st.st-sold,html[data-theme=dark] .pp-st.st-let{backgro
   .gal-grid .gal-i,.gal-grid[data-n] .gal-i.main{grid-column:1;grid-row:1}
   .gal-grid .gal-i:not(.main){display:none}
   .gal-pills{left:10px;right:10px;bottom:10px;max-width:none}
-  .gal-pill{min-height:38px;padding:0 12px}
+  .gal-pill{min-height:44px;padding:0 12px}
+  .crumbs{gap:0 10px}
+  .crumbs a{display:inline-flex;align-items:center;min-height:44px}
+  .pd-more{min-height:44px}
   .pp-feat{grid-template-columns:1fr}
   .pp-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .tp-ic{width:68px;height:68px}

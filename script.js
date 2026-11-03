@@ -50,10 +50,10 @@ targets.forEach(el => io.observe(el));
 function countUp(el) {
   const end = +el.dataset.count;
   if (reduceMotion) return;
-  const t0 = performance.now(), dur = 1400;
+  const t0 = performance.now(), dur = 900, from = Math.floor(end * 0.6);
   const tick = now => {
     const p = Math.min((now - t0) / dur, 1);
-    el.textContent = Math.round(end * (1 - Math.pow(1 - p, 3)));
+    el.textContent = Math.round(from + (end - from) * (1 - Math.pow(1 - p, 3)));
     if (p < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);

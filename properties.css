@@ -59,7 +59,7 @@ html[data-theme=dark] .rb-alert:hover{color:var(--navy-d)}
 .rb-sort .inp{min-height:44px;padding:0 12px}
 .rb-sort select{padding:10px 24px 10px 0!important;font-size:.9rem!important}
 .vt{display:inline-flex;border:1px solid var(--line);background:var(--surface)}
-.vt button{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px;border:0;background:none;color:var(--muted);font:500 .66rem Roboto,sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .3s,color .3s}
+.vt button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:0;background:none;color:var(--muted);font:500 .66rem Roboto,sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;transition:background .3s,color .3s}
 .vt button .ic{width:16px;height:16px}
 .vt button[aria-pressed=true]{background:var(--navy);color:#fff}
 html[data-theme=dark] .vt button[aria-pressed=true]{background:var(--mint);color:var(--navy-d)}
@@ -87,7 +87,7 @@ html[data-theme=dark] .vt button[aria-pressed=true]{background:var(--mint);color
 .pc-n .ic{width:15px;height:15px}
 .pc-tour{position:absolute;right:12px;bottom:12px;z-index:2;display:inline-flex;align-items:center;gap:7px;padding:6px 11px;background:rgba(255,255,255,.95);color:var(--navy-d);font:500 .66rem Roboto,sans-serif;letter-spacing:.14em;text-transform:uppercase}
 .pc-tour .ic{width:16px;height:16px;color:var(--acc)}
-.pc-fav{position:absolute;top:12px;right:12px;z-index:3;display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:rgba(255,255,255,.94);color:var(--navy-d);cursor:pointer;transition:transform .3s,color .3s}
+.pc-fav{position:absolute;top:12px;right:12px;z-index:3;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.94);color:var(--navy-d);cursor:pointer;transition:transform .3s,color .3s}
 .pc-fav:hover{transform:scale(1.1)}
 .pc-fav .ic{width:19px;height:19px}
 .pc-fav[aria-pressed=true] .ic{fill:#c8402f;color:#c8402f;stroke:#c8402f}
