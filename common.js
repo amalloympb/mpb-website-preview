@@ -29,8 +29,10 @@ menu.addEventListener('click', e => { if (e.target.closest('a')) setMenu(false);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false); });
 
 // ---- Lead capture ----
-// Point `endpoint` at anything that accepts a JSON POST (CRM webhook, Formspree, Zapier...).
-// While it is empty the forms run in preview mode: the payload is logged to the console and nothing is sent.
+// Leads go to the site's own server (/api/leads), which logs them and emails the right office.
+// Set `endpoint` to send them somewhere else instead (CRM webhook, Formspree, Zapier... or the full URL of the server's /api/leads).
+// On a static host with no server behind it (the GitHub Pages preview) the forms run in preview mode:
+// the payload is logged to the console and nothing is sent.
 const LEAD = { endpoint: '' };
 
 // First-touch attribution, kept for the session so leads can be tied back to a campaign
@@ -50,20 +52,25 @@ const attribution = (() => {
 // dataLayer events are ready for Google Tag Manager (not loaded on this page)
 const track = (event, data = {}) => { (window.dataLayer = window.dataLayer || []).push({ event, ...data }); };
 
+let noLeadApi = location.protocol === 'file:';
 const sendLead = async (type, data) => {
   const payload = { ...data, lead_type: type, submitted_at: new Date().toISOString(), page: location.href, attribution };
-  if (!LEAD.endpoint) {
+  const preview = async () => {
     console.info('[My Property Box] Lead captured in preview mode (not sent):', payload);
     await new Promise(r => setTimeout(r, 600));
     return { preview: true };
-  }
-  const res = await fetch(LEAD.endpoint, {
+  };
+  if (!LEAD.endpoint && noLeadApi) return preview();
+  const res = await fetch(LEAD.endpoint || '/api/leads', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(payload)
   });
+  // No server behind this host (a static site): 404/405/501 mean preview mode. Real failures still raise an error.
+  if (!LEAD.endpoint && [404, 405, 501].includes(res.status)) { noLeadApi = true; return preview(); }
   if (!res.ok) throw new Error('Lead endpoint responded ' + res.status);
-  return { preview: false };
+  const out = await res.json().catch(() => ({}));
+  return { preview: !!out.demo };
 };
 
 const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);

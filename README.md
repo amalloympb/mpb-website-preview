@@ -56,8 +56,8 @@ The property page can offer real viewing times based on the negotiators' diaries
   within ~3 miles around that time. Only postcodes (or outcodes with `GEOCODE_PRECISION=outcode`) are sent to
   postcodes.io. Other clients' addresses and negotiator names are never exposed to the browser.
 - **Booking requests.** A request re-checks availability, then records the lead (`server/data/leads.jsonl`), places
-  a temporary hold so the slot is not offered twice, and POSTs to `LEAD_WEBHOOK_URL` if set. The visitor is told
-  the time is *requested* and the team will confirm. Nothing is written back to the CRM.
+  a temporary hold so the slot is not offered twice, and sends it on by email and `LEAD_WEBHOOK_URL` (see Lead
+  capture). The visitor is told the time is *requested* and the team will confirm. Nothing is written back to the CRM.
 - **Per-CRM adapters** (`server/diary/`):
 
 | Source | State |
@@ -69,7 +69,7 @@ The property page can offer real viewing times based on the negotiators' diaries
   Add a source by creating `server/diary/<name>.js` that exports `{ name, configured(), getBusy({ fresh }) }`
   (`getBusy` resolves to the negotiators and their events, as in `mock.js` / `veco.js`), and choosing it in
   `server/diary/index.js`.
-- **Tests:** `node --test server/test/engine.test.js server/test/api.test.js server/test/veco.test.js`
+- **Tests:** `node --test --test-concurrency=1 server/test/engine.test.js server/test/api.test.js server/test/veco.test.js server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js feed/test/rightmove.test.js`
 - **Deploying:** run behind HTTPS with `HOST=0.0.0.0` and `TRUST_PROXY=1`. Keep `server/.env` and `server/data/`
   private (they are in `.gitignore`, and the server refuses to serve `server/`, `feed/` and dotfiles).
 - Unverified until tested on real Veco data: recurrence numbering, time zone handling of repeating events and
@@ -143,9 +143,34 @@ az login
 
 ## Lead capture
 
-All forms (valuation wizard, viewing/question/interest enquiries, sold-property alerts, search alerts) post JSON via
-`sendLead()` in `common.js`. In `LEAD.endpoint` (also in `common.js`), set any URL that accepts a JSON POST: a CRM
-webhook, Zapier, Formspree and so on. **While it is empty the forms run in preview mode and nothing is sent.**
+All forms (valuation wizard, viewing/question/interest enquiries, sold-property alerts, search alerts, calculators,
+the header callback request) post JSON via `sendLead()` in `common.js` to **`POST /api/leads`** on the site's own
+server (`server/server.js`). There it is validated, written to the private log (`server/data/leads.jsonl`), and
+emailed to the right office (`server/mail.js`).
+
+- **Where the email goes.** Recipients are set only in server settings, never from the form. `LEAD_EMAIL_TO` is the
+  default inbox. `LEAD_EMAIL_DARLINGTON`, `_NEWCASTLE`, `_NORTHALLERTON`, `_CARLISLE`, `_PENRITH` and `_KENDAL`
+  override it for that office (the lead's office comes from the town page, the callback office choice, or the
+  property: Rightmove rows by branch, the rest the nearest office). `LEAD_EMAIL_CC` is copied on everything.
+  **Reply** in the mail client goes to the visitor. Nothing is guessed: with no inbox set, nothing is sent.
+- **Mail settings.** `SMTP_HOST`, `SMTP_PORT` (587 STARTTLS by default; `SMTP_SECURE=true` for 465), `SMTP_USER`,
+  `SMTP_PASS` and `MAIL_FROM` (see `server/.env.example`). It refuses to send without TLS. Microsoft 365 needs SMTP
+  AUTH enabled for the mailbox and Google Workspace needs an app password, so check that with whoever manages the
+  email. If SMTP is awkward, point `LEAD_WEBHOOK_URL` at Zapier, Make or Power Automate instead.
+- **Safety.** Every lead is logged first, so a mail failure never loses one. A mail failure is logged and the
+  visitor still sees success. Limits: 10 leads per IP per 10 minutes (`RATE_LEADS`) and 200 emails per hour overall
+  (`RATE_LEADS_GLOBAL`), after which leads are logged but not emailed. Bodies over 32 KB, unknown lead types, a
+  missing consent tick or no valid email or phone are refused.
+- **Preview mode.** With `DIARY_MODE=demo` leads are only logged and the page says it is a preview. On a static host
+  with no server (the GitHub Pages preview) `/api/leads` does not exist, so the forms log the payload to the console
+  and send nothing. To post from a static site to a server elsewhere, set `LEAD.endpoint` in `common.js` to that
+  server's full `/api/leads` URL and set `ALLOWED_ORIGIN` on the server.
+- **Booking requests** use the same delivery. The email says clearly that the slot is held on the website but **not**
+  in the diary, so staff confirm it and add it by hand.
+- **Tests:** `node --test server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js`. They use
+  a fake SMTP server (including STARTTLS and AUTH, with a throwaway `localhost` certificate in `server/test/fixtures`).
+  Nothing has been tried against a real mailbox yet: send a test lead through the real server once `server/.env` is set.
+
 Each lead carries the property, price, CRM, whether it has a 360 tour, consent wording and attribution.
 `dataLayer` events are pushed for Google Tag Manager.
 
@@ -158,6 +183,10 @@ as plain markup, so update them there too if a number changes. Rightmove trackin
 
 ## Before going live
 
+- **Switch lead delivery on.** The Azure test app runs with `DIARY_MODE=demo`, which logs leads but never emails them.
+  For real leads: remove `DIARY_MODE` (deploy with `-DiaryMode live`), set the `SMTP_*`, `MAIL_FROM` and
+  `LEAD_EMAIL_*` settings, then submit a test lead and check it arrives. Without them the server prints a warning at
+  startup and leads only go to the private log.
 - **Confirm the facts.** The homepage and landing pages still say "seven offices" and list Cockermouth, but only six
   offices have a confirmed number (the footer and call dialog show those six). The "15+ years", "£50m" and
   "39-second valuation" claims have no evidence in this repo. The legal entity wording (My Property Box Ltd, MPB

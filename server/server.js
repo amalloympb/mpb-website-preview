@@ -17,6 +17,7 @@ const http = require('http');
 const crypto = require('crypto');
 const { computeAvailability, londonParts } = require('./engine');
 const { adapterFor, isDemo } = require('./diary');
+const { sendLeadEmail, viewingRecord, officeId, isAddress, config: mailConfig } = require('./mail');
 
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -94,11 +95,13 @@ const clientIp = req => {
 };
 
 const readBody = (req, limit = 16384) => new Promise((resolve, reject) => {
-  let size = 0; const chunks = [];
-  req.on('data', c => { size += c.length; if (size > limit) { reject(Object.assign(new Error('too large'), { status: 413 })); req.destroy(); } else chunks.push(c); });
+  let size = 0, over = false; const chunks = [];
+  // Past the limit the rest is discarded; the handler answers 413 with Connection: close, which ends the upload.
+  req.on('data', c => { if (over) return; size += c.length; if (size > limit) { over = true; chunks.length = 0; reject(Object.assign(new Error('too large'), { status: 413 })); } else chunks.push(c); });
   req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
   req.on('error', reject);
 });
+const tooLarge = e => (e.status === 413 ? { Connection: 'close' } : {});
 
 let chain = Promise.resolve();
 const locked = fn => { const p = chain.then(fn); chain = p.catch(() => {}); return p; };
@@ -131,7 +134,7 @@ async function booking(req, res) {
   if (limited('bk:' + ip, Number(process.env.RATE_BOOKINGS) || 6, 600000)) return json(res, 429, { error: 'rate_limited' });
   if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) return json(res, 415, { error: 'unsupported_media_type' });
   let b;
-  try { b = JSON.parse(await readBody(req)); } catch (e) { return json(res, e.status || 400, { error: e.status === 413 ? 'too_large' : 'bad_json' }); }
+  try { b = JSON.parse(await readBody(req)); } catch (e) { return json(res, e.status || 400, { error: e.status === 413 ? 'too_large' : 'bad_json' }, tooLarge(e)); }
   if (!b || typeof b !== 'object') return json(res, 400, { error: 'bad_json' });
 
   if (str(b.company_website, 100)) return json(res, 200, { ok: true, ref: 'MPB-00000000' }); // honeypot: pretend success, store nothing
@@ -168,24 +171,92 @@ async function booking(req, res) {
       contact: { name, email, phone, message: str(b.message, 600), buyer_position: str(b.buyer_position, 60), occupants: str(b.occupants, 20), move_in_date: move },
       consent: true, consent_statement: str(b.consent_statement, 800), attribution: cleanAttribution(b.attribution)
     };
-    let stored = '';
-    try {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.appendFileSync(LEADS_FILE(), JSON.stringify(record) + '\n');
-      stored = 'file';
-    } catch (e) { console.error('lead file write failed:', e.message); }
-    if (process.env.LEAD_WEBHOOK_URL && !demo) {
-      try {
-        const r = await fetch(process.env.LEAD_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record), signal: AbortSignal.timeout(8000) });
-        if (r.ok) stored = 'webhook'; else console.error('lead webhook responded', r.status);
-      } catch (e) { console.error('lead webhook failed:', e.message); }
-    }
-    if (!stored) return { status: 502, body: { error: 'not_stored' } };
+    const channels = await deliver(record, viewingRecord(record, property));
+    if (!channels.length) return { status: 502, body: { error: 'not_stored' } };
     readHolds().push({ id: ref, property_id: String(property.id), negotiator: chosen.id, start: startMs, end: startMs + 30 * 60000, lat: property.lat, lng: property.lng, created: Date.now() });
     try { saveHolds(); } catch (e) { console.error('holds write failed:', e.message); }
-    return { status: 200, body: { ok: true, ref, start: slot.start, date: record.slot.local.slice(0, 10), t: slot.t, demo, stored } };
+    return { status: 200, body: { ok: true, ref, start: slot.start, date: record.slot.local.slice(0, 10), t: slot.t, demo, channels } };
   });
   json(res, out.status, out.body);
+}
+
+// ---- Leads: every enquiry, valuation and callback form posts here ----
+const LEAD_TYPES = new Set(['enquiry', 'callback', 'valuation', 'compliance_check', 'alert', 'report']);
+const KEY_RE = /^[A-Za-z0-9_]{1,40}$/;
+
+// Keeps strings, numbers, booleans and small arrays/objects of those; everything is size-capped.
+function cleanValue(v, depth = 0) {
+  if (typeof v === 'string') return v.trim().slice(0, 1500);
+  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+  if (typeof v === 'boolean') return v;
+  if (depth >= 2) return undefined;
+  if (Array.isArray(v)) return v.slice(0, 30).map(x => cleanValue(x, depth + 1)).filter(x => x !== undefined);
+  if (v && typeof v === 'object') {
+    const o = {};
+    for (const [k, x] of Object.entries(v).slice(0, 40)) { const c = KEY_RE.test(k) ? cleanValue(x, depth + 1) : undefined; if (c !== undefined) o[k] = c; }
+    return o;
+  }
+  return undefined;
+}
+
+// Everything is written to the private log first; the webhook and email are sent on top. Returns the channels that worked.
+async function deliver(record, mailRec, { email = true } = {}) {
+  const channels = [];
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.appendFileSync(LEADS_FILE(), JSON.stringify(record) + '\n');
+    channels.push('file');
+  } catch (e) { console.error('lead file write failed:', e.message); }
+  if (isDemo()) return channels;
+  if (process.env.LEAD_WEBHOOK_URL) {
+    try {
+      const r = await fetch(process.env.LEAD_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record), signal: AbortSignal.timeout(8000) });
+      if (r.ok) channels.push('webhook'); else console.error('lead webhook responded', r.status);
+    } catch (e) { console.error('lead webhook failed:', e.message); }
+  }
+  if (mailRec && email) {
+    try { if ((await sendLeadEmail(mailRec)).sent) channels.push('email'); } catch (e) { console.error('lead email failed:', e.message); }
+  }
+  return channels;
+}
+
+async function lead(req, res) {
+  const ip = clientIp(req);
+  if (limited('ld:' + ip, Number(process.env.RATE_LEADS) || 10, 600000)) return json(res, 429, { error: 'rate_limited' });
+  if (!/^application\/json\b/i.test(req.headers['content-type'] || '')) return json(res, 415, { error: 'unsupported_media_type' });
+  let b;
+  try { b = JSON.parse(await readBody(req, 32768)); } catch (e) { return json(res, e.status || 400, { error: e.status === 413 ? 'too_large' : 'bad_json' }, tooLarge(e)); }
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return json(res, 400, { error: 'bad_json' });
+
+  if (str(b.company_website, 100)) return json(res, 200, { ok: true, ref: 'MPB-00000000' }); // honeypot: pretend success, store nothing
+
+  const type = str(b.lead_type, 30);
+  if (!LEAD_TYPES.has(type)) return json(res, 422, { error: 'invalid', field: 'lead_type' });
+  const fields = {};
+  for (const [k, v] of Object.entries(b).slice(0, 80)) {
+    if (!KEY_RE.test(k) || ['lead_type', 'attribution', 'page', 'submitted_at', 'consent_statement'].includes(k)) continue;
+    const c = cleanValue(v);
+    if (c !== undefined && c !== '') fields[k] = c;
+  }
+  const email = typeof fields.email === 'string' ? fields.email : '', phone = typeof fields.phone === 'string' ? fields.phone : '';
+  if (email && !isAddress(email)) return json(res, 422, { error: 'invalid', field: 'email' });
+  if (phone && !/^[0-9+()\s-]{7,20}$/.test(phone)) return json(res, 422, { error: 'invalid', field: 'phone' });
+  if (!email && !phone) return json(res, 422, { error: 'invalid', field: 'email' });
+  if (fields.consent !== true) return json(res, 422, { error: 'invalid', field: 'consent' });
+
+  const demo = isDemo();
+  const ref = 'MPB-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+  const office = officeId(fields.office);
+  const record = {
+    type, ref, received: new Date().toISOString(), demo, office, fields,
+    page: str(b.page, 300), consent_statement: str(b.consent_statement, 800), attribution: cleanAttribution(b.attribution)
+  };
+  // A flood of submissions must not flood the mailbox: past the hourly cap leads are still logged, just not emailed.
+  const emailOk = !limited('ld:all', Number(process.env.RATE_LEADS_GLOBAL) || 200, 3600000);
+  if (!emailOk) console.error('lead email cap reached: logging only');
+  const channels = await deliver(record, record, { email: emailOk });
+  if (!channels.length) return json(res, 502, { error: 'not_stored' });
+  json(res, 200, { ok: true, ref, demo, channels });
 }
 
 // ---- Static files (allow-list) ----
@@ -233,6 +304,7 @@ function createServer() {
         if (url.pathname === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, mode: isDemo() ? 'demo' : 'live' });
         if (url.pathname === '/api/availability' && req.method === 'GET') return await availability(req, res, url);
         if (url.pathname === '/api/viewings' && req.method === 'POST') return await booking(req, res);
+        if (url.pathname === '/api/leads' && req.method === 'POST') return await lead(req, res);
         return json(res, 404, { error: 'not_found' });
       }
       await serveStatic(req, res, url.pathname);
@@ -247,6 +319,8 @@ if (require.main === module) {
   const port = Number(process.env.PORT) || 8080, host = process.env.HOST || '127.0.0.1';
   createServer().listen(port, host, () => {
     console.log(`My Property Box site on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}  (diary: ${isDemo() ? 'DEMO data' : 'live adapters only'})`);
+    if (isDemo()) console.warn('WARNING: DIARY_MODE=demo. Leads are only written to the private log (never emailed) and viewing slots are sample data. Remove DIARY_MODE before going live.');
+    else if (!mailConfig() && !process.env.LEAD_WEBHOOK_URL) console.warn('WARNING: no lead delivery is configured (SMTP_HOST, MAIL_FROM and LEAD_EMAIL_TO, or LEAD_WEBHOOK_URL). Leads are only written to the private log.');
   });
 }
 

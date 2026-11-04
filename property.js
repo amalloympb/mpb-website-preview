@@ -367,7 +367,7 @@
   const enquiry = (p, off, d) => {
     const form = $('#enq'), err = $('#enqErr'), done = $('#enqDone'), sk = secKey(p);
     const reg = p.status === 'sstc' || p.status === 'let-agreed';
-    const lead = { property_id: p.id, property_address: p.address, property_section: sk, property_price: priceText(p), property_status: p.status, property_crm: p.source, property_url: p.url, has_360_tour: !!d.tour };
+    const lead = { property_id: p.id, property_address: p.address, property_section: sk, property_price: priceText(p), property_status: p.status, property_crm: p.source, property_url: p.url, has_360_tour: !!d.tour, office: (officeFor(p) || {}).id || '' };
 
     // Shared: send people who cannot enquire (sold or let) towards a valuation and similar-property alerts
     if (off) {
