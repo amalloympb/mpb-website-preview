@@ -9,12 +9,21 @@
   Nothing is created until you have run `az login` and confirmed the subscription shown. Credentials are
   never written into the package. Add CRM secrets afterwards with `az webapp config appsettings set`.
 
-  By default the package gets <meta name="robots" content="noindex,nofollow"> on every page, the same as the
-  GitHub Pages preview. Use -Index when you are ready to go live.
+  By default the site is a hidden preview: every page gets <meta name="robots" content="noindex,nofollow">,
+  the server sends an X-Robots-Tag: noindex header and robots.txt disallows everything, the same as the
+  GitHub Pages preview.
+
+  -Index is the go-live switch. It sets ALLOW_INDEXING=1 and SITE_URL, which turns on the public robots.txt,
+  the sitemap and the 301 redirect from any other hostname (including <AppName>.azurewebsites.net) to SITE_URL.
+  Only use it once the custom domain is bound to the app and DNS points at it, otherwise visitors to the
+  azurewebsites.net address are sent to a site that is not there yet. See the README, "Going live".
 
 .EXAMPLE
   az login
   ./deploy/azure-deploy.ps1 -AppName mpb-preview-abc
+
+.EXAMPLE
+  ./deploy/azure-deploy.ps1 -AppName mpb-live -Sku B1 -DiaryMode live -Index    # go live on https://www.mypropertybox.co.uk
 
 .EXAMPLE
   ./deploy/azure-deploy.ps1 -AppName mpb-preview-abc -PackageOnly    # build the zip, touch nothing in Azure
@@ -30,7 +39,9 @@ param(
   [ValidateSet('demo', 'live')]
   [string]$DiaryMode = 'demo',            # demo = sample viewing times; live = real CRM adapters only
   [string]$SubscriptionId,
-  [switch]$Index,                         # leave pages indexable by search engines
+  [switch]$Index,                         # go live: indexable pages, sitemap, canonical-host redirect to -SiteUrl
+  [ValidatePattern('^https://[a-z0-9.-]+$')]
+  [string]$SiteUrl = 'https://www.mypropertybox.co.uk',   # the public address, no trailing slash; used with -Index
   [switch]$PackageOnly,                   # build the zip and stop
   [switch]$Yes                            # skip the confirmation prompt
 )
@@ -105,6 +116,11 @@ Write-Host "Subscription : $($acct.name) ($($acct.id))"
 Write-Host "Signed in as : $($acct.user)"
 Write-Host "Will create  : resource group '$ResourceGroup' in $Location, plan '$plan' ($Sku, Linux), web app '$AppName' (Node 20)"
 Write-Host "Diary mode   : $DiaryMode"
+if ($Index) {
+  Write-Host "Indexing     : ON. Search engines may index $SiteUrl. Other hostnames, including https://$AppName.azurewebsites.net, will 301 to it."
+} else {
+  Write-Host 'Indexing     : off (hidden preview)'
+}
 if ($Sku -eq 'F1') { Write-Host 'Note: F1 is free but sleeps when idle, so the first visit after a quiet spell is slow.' }
 if (-not $Yes) {
   if ((Read-Host 'Create these resources and deploy? (y/N)') -notmatch '^[yY]') { Write-Host 'Cancelled. Nothing was created.'; return }
@@ -122,8 +138,10 @@ $settings = @(
   'SCM_DO_BUILD_DURING_DEPLOYMENT=false'
 )
 if ($DiaryMode -eq 'demo') { $settings += 'DIARY_MODE=demo' }
+if ($Index) { $settings += 'ALLOW_INDEXING=1'; $settings += "SITE_URL=$SiteUrl" }
 Invoke-Az webapp config appsettings set --name $AppName --resource-group $ResourceGroup --settings @settings --output none
 if ($DiaryMode -eq 'live') { Invoke-Az webapp config appsettings delete --name $AppName --resource-group $ResourceGroup --setting-names DIARY_MODE --output none }
+if (-not $Index) { Invoke-Az webapp config appsettings delete --name $AppName --resource-group $ResourceGroup --setting-names ALLOW_INDEXING SITE_URL --output none }
 
 Invoke-Az webapp update --name $AppName --resource-group $ResourceGroup --https-only true --output none
 Invoke-Az webapp config set --name $AppName --resource-group $ResourceGroup --startup-file 'node server/server.js' --min-tls-version 1.2 --ftps-state Disabled --http20-enabled true --output none
@@ -150,4 +168,10 @@ Write-Host '  - Forms run in preview mode (nothing is sent) until LEAD.endpoint 
 Write-Host '  - Add CRM secrets as app settings, never in code, for example:'
 Write-Host "      az webapp config appsettings set -n $AppName -g $ResourceGroup --settings VECO_CLIENT_ID=... VECO_CLIENT_SECRET=... VECO_RESOURCE_IDS=..."
 Write-Host '  - The property feed is the snapshot in data/. Redeploy to refresh it (see README, "Azure").'
+if ($Index) {
+  Write-Host "  - Live: bind the domain (az webapp config hostname add / az webapp config ssl create) so $SiteUrl reaches this app,"
+  Write-Host '    then submit the sitemap in Google Search Console. See the README, "Going live".'
+} else {
+  Write-Host '  - When the domain points at this app, re-run with -Index to go live (README, "Going live").'
+}
 Write-Host "  - Tear down when finished: az group delete --name $ResourceGroup"

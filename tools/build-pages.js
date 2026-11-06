@@ -61,9 +61,12 @@ const FOOTER = pick(sell, /<footer class="footer">[\s\S]*?<\/footer>/, 'footer')
 const HERO_IMG = pick(sell, /<div class="hero-media"[\s\S]*?<\/div>/, 'hero image');
 const MINI = pick(sell, /<div class="lp-mini">[\s\S]*?<\/div>/, 'trust logos');
 const CTA_IMG = pick(sell, /<div class="cta-bg"[\s\S]*?<\/div>/, 'CTA image');
-const OG_IMG = 'https://images.unsplash.com/photo-1691829120775-0b56db1c2e0c?w=1200&h=630&auto=format&fit=crop&q=70';
+const OG_IMG = `${(process.env.SITE_URL || 'https://www.mypropertybox.co.uk').replace(/\/+$/, '')}/assets/og-image.jpg`;
+const PAYMENT_URL = process.env.PAYMENT_URL || 'https://www.mypropertybox.co.uk/payment.php';
+// Canonical and og:url are fixed to the live domain (same as server/seo.js and tools/seo-check.js)
+const SITE = (process.env.SITE_URL || 'https://www.mypropertybox.co.uk').replace(/\/+$/, '');
 
-const head = ({ title, desc, file, ld = [] }) => `<!DOCTYPE html>
+const head = ({ title, desc, file, ld = [], noindex = false }) => `<!DOCTYPE html>
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
@@ -71,17 +74,15 @@ const head = ({ title, desc, file, ld = [] }) => `<!DOCTYPE html>
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#134165">
-<link rel="canonical" href="${file}" id="canon">
+${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" href="${SITE}/${file}">`}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="My Property Box">
 <meta property="og:locale" content="en_GB">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
-<meta property="og:url" content="" id="ogurl">
-<meta property="og:image" content="${OG_IMG}">
+${noindex ? '' : `<meta property="og:url" content="${SITE}/${file}">\n`}<meta property="og:image" content="${OG_IMG}">
 <meta name="twitter:card" content="summary_large_image">
-<script>(function(){var u=location.origin+location.pathname;document.getElementById('canon').href=u;document.getElementById('ogurl').content=u})()</script>
-${ld.map(o => `<script type="application/ld+json">${json(o)}</script>`).join('\n')}
+${ld.map(o =>  `<script type="application/ld+json">${json(o)}</script>`).join('\n')}
 <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -351,7 +352,7 @@ ${ctaBand(`Ready to talk to a <em>${esc(p.name)}</em> expert?`, 'Free, no-obliga
 // ---- Areas index ----
 const areasPage = () => {
   const file = 'areas.html';
-  const title = 'Areas We Cover | Estate & Letting Agents in the North | My Property Box';
+  const title = 'Areas We Cover | Estate & Letting Agents | My Property Box';
   const desc = 'Estate and letting agents across the North East, North Yorkshire and Cumbria. Find your local My Property Box office and the towns it covers.';
   const cards = OFFICES.map(o => {
     const own = bySlug[o.id];
@@ -577,7 +578,7 @@ const SERVICE_PAGES = [
   },
   {
     file: 'student.html',
-    title: 'Student Lets | Student Properties & Landlord Appraisals | My Property Box',
+    title: 'Student Lets | Properties & Landlord Appraisals | My Property Box',
     desc: 'Browse current student properties, or get a free rental appraisal for your student let from My Property Box.',
     eyebrow: 'Student lets',
     h1: 'Student lets, <em>made simple.</em>',
@@ -794,7 +795,7 @@ const docPage = c => {
     return `<h2 id="${id}">${t}</h2>`;
   });
   const hasToc = c.toc && toc.length >= 3;
-  const html = head({ title: c.title, desc: c.desc, file: c.file }) + `
+  const html = head({ title: c.title, desc: c.desc, file: c.file, noindex: c.noindex }) + `
 <main id="main">
 
   <section class="hero lp-hero doc-hero" id="start">
@@ -1008,7 +1009,7 @@ const DOC_PAGES = [
             <p class="kicker">Debit or credit card</p>
             <h2>Pay by card</h2>
             <p>For a one-off payment by debit card or credit card, use our secure payment form. It opens on our main website, where you choose the payment type: deposit, rent or other.</p>
-            <a class="btn btn-navy" href="https://www.mypropertybox.co.uk/payment.php" target="_blank" rel="noopener">Pay by card</a>
+            <a class="btn btn-navy" href="${PAYMENT_URL}" target="_blank" rel="noopener">Pay by card</a>
           </article>
           <article class="doc-card">
             <p class="kicker">Bank transfer</p>
@@ -1023,6 +1024,21 @@ const DOC_PAGES = [
         <p class="doc-note">Not sure which payment applies to you? Call your local office before you pay.</p>
         <div class="row">
           <button type="button" class="btn btn-line" data-call>Call your local office</button>
+        </div>`
+  },
+  {
+    file: '404.html', toc: false, noindex: true,
+    title: 'Page not found | My Property Box',
+    desc: 'The page you were looking for could not be found.',
+    eyebrow: 'Page not found',
+    h1: 'We cannot find <em>that page.</em>',
+    lead: 'It may have moved or no longer exist. These links should get you back on track.',
+    body: `        <p>If you were looking for a property, our search lists every home for sale and to let. For anything else, your local team will be happy to help.</p>
+        <div class="row">
+          <a class="btn btn-navy" href="index.html">Go to the home page</a>
+          <a class="btn btn-line" href="properties.html?section=sales">Homes for sale</a>
+          <a class="btn btn-line" href="properties.html?section=lets">Properties to let</a>
+          <a class="btn btn-line" href="contact.html">Contact us</a>
         </div>`
   }
 ];

@@ -14,10 +14,13 @@ const path = require('path');
 })();
 
 const http = require('http');
+const zlib = require('zlib');
 const crypto = require('crypto');
 const { computeAvailability, londonParts } = require('./engine');
 const { adapterFor, isDemo } = require('./diary');
 const { sendLeadEmail, viewingRecord, officeId, isAddress, config: mailConfig } = require('./mail');
+const seo = require('./seo');
+const { legacyRedirect } = require('./redirects');
 
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -34,15 +37,18 @@ const engineOpts = () => {
 };
 
 // ---- Properties (from the synced feed) ----
-let index = { mtime: 0, map: new Map() };
-async function getProperty(id) {
+let index = { mtime: 0, list: [], map: new Map() };
+async function feed() {
   const file = path.join(ROOT, 'data', 'properties.json');
   const st = await fs.promises.stat(file);
   if (st.mtimeMs !== index.mtime) {
     const j = JSON.parse(await fs.promises.readFile(file, 'utf8'));
-    index = { mtime: st.mtimeMs, map: new Map(j.properties.map(p => [String(p.id), p])) };
+    index = { mtime: st.mtimeMs, list: j.properties, map: new Map(j.properties.map(p => [String(p.id), p])) };
   }
-  return index.map.get(String(id)) || null;
+  return index;
+}
+async function getProperty(id) {
+  return (await feed()).map.get(String(id)) || null;
 }
 
 // ---- Holds: viewings requested through the site, so the same slot is not offered twice ----
@@ -265,26 +271,108 @@ const TYPES = {
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.avif': 'image/avif', '.gif': 'image/gif',
   '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff',   '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8', '.pdf': 'application/pdf'
 };
-const PRIVATE_DIRS = new Set(['server', 'feed', 'archive', 'node_modules']);
+const PRIVATE_DIRS = new Set(['server', 'feed', 'archive', 'node_modules', 'tools', 'deploy']);
+const COMPRESSIBLE = /^(text\/|application\/(json|xml)|image\/svg)/;
+
+const zcache = new Map();
+const acceptedEncoding = req => {
+  const a = String(req.headers['accept-encoding'] || '');
+  return /\bbr\b/.test(a) ? 'br' : /\bgzip\b/.test(a) ? 'gzip' : '';
+};
+const compress = (buf, enc) => new Promise((resolve, reject) => {
+  const done = (e, out) => (e ? reject(e) : resolve(out));
+  if (enc === 'br') zlib.brotliCompress(buf, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } }, done);
+  else zlib.gzip(buf, { level: 6 }, done);
+});
+
+// Sends a whole body, compressed when the client accepts it. `key` (file path + version) lets the compressed copy be reused.
+async function respond(req, res, { status = 200, type, body, key, headers = {} }) {
+  const enc = body.length > 1024 && COMPRESSIBLE.test(type) ? acceptedEncoding(req) : '';
+  const h = { ...SEC_HEADERS, 'Content-Type': type, Vary: 'Accept-Encoding', ...headers };
+  let out = body;
+  if (enc) {
+    const ck = key && enc + '|' + key;
+    out = ck ? zcache.get(ck) : null;
+    if (!out) {
+      out = await compress(body, enc);
+      if (ck) { if (zcache.size >= 400) zcache.delete(zcache.keys().next().value); zcache.set(ck, out); }
+    }
+    h['Content-Encoding'] = enc;
+  }
+  h['Content-Length'] = out.length;
+  res.writeHead(status, h);
+  res.end(req.method === 'HEAD' ? undefined : out);
+}
+
+async function notFound(req, res, ext) {
+  if (ext === '' || ext === '.html') {
+    const html = await fs.promises.readFile(path.join(ROOT, '404.html'), 'utf8').catch(() => null);
+    if (html) return respond(req, res, { status: 404, type: TYPES['.html'], body: Buffer.from(seo.withBase(html)), headers: { 'Cache-Control': 'no-cache' } });
+  }
+  return send(res, 404, 'Not found');
+}
 
 async function serveStatic(req, res, pathname) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed', { Allow: 'GET, HEAD' });
   let rel;
   try { rel = decodeURIComponent(pathname); } catch (e) { return send(res, 400, 'Bad request'); }
   if (rel.includes('\0') || rel.includes('\\')) return send(res, 400, 'Bad request');
+  const miss = () => notFound(req, res, path.extname(rel).toLowerCase());
   if (rel.endsWith('/')) rel += 'index.html';
   const parts = rel.split('/').filter(Boolean);
-  if (parts.some(s => s.startsWith('.') || s === '..') || PRIVATE_DIRS.has(parts[0])) return send(res, 404, 'Not found');
+  if (parts.some(s => s.startsWith('.') || s === '..') || PRIVATE_DIRS.has(parts[0])) return miss();
   let file = path.resolve(ROOT, ...parts);
-  if (file !== ROOT && !file.startsWith(ROOT + path.sep)) return send(res, 404, 'Not found');
+  if (file !== ROOT && !file.startsWith(ROOT + path.sep)) return miss();
   let st = await fs.promises.stat(file).catch(() => null);
   if (st && st.isDirectory()) { file = path.join(file, 'index.html'); st = await fs.promises.stat(file).catch(() => null); }
   const ext = path.extname(file).toLowerCase();
-  if (!st || !st.isFile() || !TYPES[ext] || (ext === '.json' && parts[0] !== 'data')) return send(res, 404, 'Not found');
+  if (!st || !st.isFile() || !TYPES[ext] || (ext === '.json' && parts[0] !== 'data')) return miss();
   const cacheable = !['.html', '.js', '.css', '.json'].includes(ext);
-  res.writeHead(200, { ...SEC_HEADERS, 'Content-Type': TYPES[ext], 'Content-Length': st.size, 'Cache-Control': cacheable ? 'public, max-age=86400' : 'no-cache' });
+  const etag = `W/"${st.size.toString(36)}-${Math.round(st.mtimeMs).toString(36)}"`;
+  const base = { ETag: etag, 'Cache-Control': cacheable ? 'public, max-age=86400' : 'no-cache' };
+  if (req.headers['if-none-match'] === etag) { res.writeHead(304, { ...SEC_HEADERS, Vary: 'Accept-Encoding', ...base }); return res.end(); }
+  if (COMPRESSIBLE.test(TYPES[ext]) && st.size <= 8 * 1024 * 1024) {
+    return respond(req, res, { type: TYPES[ext], body: await fs.promises.readFile(file), key: `${file}|${st.mtimeMs}|${st.size}`, headers: base });
+  }
+  res.writeHead(200, { ...SEC_HEADERS, 'Content-Type': TYPES[ext], 'Content-Length': st.size, ...base });
   if (req.method === 'HEAD') return res.end();
   fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
+}
+
+// ---- SEO routes ----
+const textRoute = (req, res, type, body) => respond(req, res, { type, body: Buffer.from(body), headers: { 'Cache-Control': 'no-cache' } });
+
+async function sitemap(req, res) {
+  const properties = await feed().then(f => f.list).catch(() => []);
+  return textRoute(req, res, TYPES['.xml'], seo.sitemapXml({ files: seo.pageFiles(ROOT), properties }));
+}
+
+// property.html is one page for every listing, so the <head> is filled in here for search engines and link previews.
+async function propertyPage(req, res, url) {
+  const html = await fs.promises.readFile(path.join(ROOT, 'property.html'), 'utf8');
+  const id = url.searchParams.get('id') || '';
+  let meta = { missing: true };
+  if (ID_RE.test(id)) {
+    const p = await getProperty(id).catch(() => null);
+    if (p) {
+      const d = await fs.promises.readFile(path.join(ROOT, 'data', 'p', id + '.json'), 'utf8').then(JSON.parse).catch(() => ({}));
+      meta = seo.propertyMeta(p, d);
+    }
+  }
+  return respond(req, res, { status: meta.missing ? 404 : 200, type: TYPES['.html'], body: Buffer.from(seo.injectProperty(html, meta)), headers: { 'Cache-Control': 'no-cache' } });
+}
+
+// Old-site URLs (property-details.php, /buying/, news articles and so on) are redirected to their new homes.
+async function legacy(req, res, url) {
+  const pathname = url.pathname;
+  const ctx = {
+    ids: pathname === '/property-details.php' ? await feed().then(f => f.map).catch(() => new Map()) : new Map(),
+    pages: /^\/[a-z0-9-]+\/?$/i.test(pathname) ? new Set(seo.pageFiles(ROOT)) : new Set()
+  };
+  const to = legacyRedirect(pathname, url.search, ctx);
+  if (!to) return false;
+  send(res, 301, '', { Location: to, 'Cache-Control': 'public, max-age=3600' });
+  return true;
 }
 
 // ---- Server ----
@@ -292,6 +380,13 @@ function createServer() {
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
+      if (!seo.indexingAllowed()) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      const get = req.method === 'GET' || req.method === 'HEAD';
+      if (get && seo.indexingAllowed() && !url.pathname.startsWith('/api/')) {
+        const host = (process.env.TRUST_PROXY && req.headers['x-forwarded-host']) || req.headers.host;
+        const to = seo.canonicalRedirect(host, url.pathname + url.search);
+        if (to) return send(res, 301, '', { Location: to, 'Cache-Control': 'public, max-age=3600' });
+      }
       if (url.pathname.startsWith('/api/')) {
         const origin = process.env.ALLOWED_ORIGIN;
         if (origin && req.headers.origin === origin) {
@@ -306,6 +401,12 @@ function createServer() {
         if (url.pathname === '/api/viewings' && req.method === 'POST') return await booking(req, res);
         if (url.pathname === '/api/leads' && req.method === 'POST') return await lead(req, res);
         return json(res, 404, { error: 'not_found' });
+      }
+      if (get) {
+        if (url.pathname === '/robots.txt') return await textRoute(req, res, TYPES['.txt'], seo.robotsTxt({ allow: seo.indexingAllowed() }));
+        if (url.pathname === '/sitemap.xml') return await sitemap(req, res);
+        if (url.pathname === '/property.html') return await propertyPage(req, res, url);
+        if (await legacy(req, res, url)) return;
       }
       await serveStatic(req, res, url.pathname);
     } catch (e) {

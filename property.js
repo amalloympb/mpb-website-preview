@@ -18,7 +18,7 @@
     m.setAttribute('content', content);
   };
   const setSeo = (p, d, photos) => {
-    const url = new URL('property.html?id=' + encodeURIComponent(p.id), location.href).href;
+    const url = new URL('property.html?id=' + encodeURIComponent(p.id), $('link[rel=canonical]').href).href;
     const text = (d.summary || d.description.split('\n\n')[0] || '').replace(/\s+/g, ' ').trim();
     const desc = text.length > 157 ? text.slice(0, 157).replace(/\s+\S*$/, '') + '\u2026' : text
       || `${bedsText(p)} ${p.type || 'property'} ${p.section === 'sales' ? 'for sale' : 'to let'} in ${p.hub || p.town}. View photos and book a viewing.`;
@@ -41,10 +41,9 @@
         geo: { '@type': 'GeoCoordinates', latitude: p.lat, longitude: p.lng }
       }
     };
-    const s = document.createElement('script');
-    s.type = 'application/ld+json';
+    let s = $('#ld-property');
+    if (!s) { s = document.createElement('script'); s.id = 'ld-property'; s.type = 'application/ld+json'; document.head.append(s); }
     s.textContent = JSON.stringify(ld);
-    document.head.append(s);
   };
 
   // ---- Lightbox (photos and floorplans) ----
@@ -257,8 +256,9 @@
     w.textContent = warn;
     $('#ppFav').dataset.fav = p.id;
     const live = $('#ppLive');
-    live.href = https(p.url) || 'https://www.mypropertybox.co.uk/';
-    if (p.source === 'rightmove') live.textContent = 'View on Rightmove';
+    const ext = p.source === 'rightmove' ? https(p.url) : '';
+    live.parentElement.hidden = !ext;
+    if (ext) { live.href = ext; live.textContent = 'View on Rightmove'; }
     return sk;
   };
 

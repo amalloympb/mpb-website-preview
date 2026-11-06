@@ -3,7 +3,6 @@
 (() => {
   const { el, icon, money, loadFeed, card, watchImages, favs, ago, valueOf, priceText, BANDS, norm, inSection } = MPB;
   const PAGE = 24;
-  const LIVE_URL = 'https://www.mypropertybox.co.uk/results-gallery.php?section=';
 
   const SECTIONS = {
     sales: { tab: 'For sale', noun: 'for sale', head: 'homes for sale', soldLbl: 'Include sold' },
@@ -574,8 +573,8 @@
     const retry = el('button', 'btn btn-navy', 'Try again');
     retry.type = 'button';
     retry.addEventListener('click', () => { skeleton(6); start(); });
-    const live = el('a', 'btn btn-line', 'View on mypropertybox.co.uk');
-    live.href = LIVE_URL + S.section; live.target = '_blank'; live.rel = 'noopener';
+    const live = el('a', 'btn btn-line', 'Contact your local office');
+    live.href = 'contact.html';
     row.append(retry, live);
     box.append(icon('i-search'), el('h3', '', 'Properties are taking a moment'), el('p', '', 'Please check your connection and try again.'), row);
     grid.replaceChildren(box);

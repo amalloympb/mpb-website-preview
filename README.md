@@ -69,7 +69,7 @@ The property page can offer real viewing times based on the negotiators' diaries
   Add a source by creating `server/diary/<name>.js` that exports `{ name, configured(), getBusy({ fresh }) }`
   (`getBusy` resolves to the negotiators and their events, as in `mock.js` / `veco.js`), and choosing it in
   `server/diary/index.js`.
-- **Tests:** `node --test --test-concurrency=1 server/test/engine.test.js server/test/api.test.js server/test/veco.test.js server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js feed/test/rightmove.test.js`
+- **Tests:** `node --test --test-concurrency=1 server/test/engine.test.js server/test/api.test.js server/test/veco.test.js server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js server/test/seo.test.js server/test/redirects.test.js feed/test/rightmove.test.js`
 - **Deploying:** run behind HTTPS with `HOST=0.0.0.0` and `TRUST_PROXY=1`. Keep `server/.env` and `server/data/`
   private (they are in `.gitignore`, and the server refuses to serve `server/`, `feed/` and dotfiles).
 - Unverified until tested on real Veco data: recurrence numbering, time zone handling of repeating events and
@@ -115,7 +115,8 @@ node --test feed/test/rightmove.test.js    # adapter tests
 
 **GitHub Pages preview** (current test link): `.github/workflows/pages.yml` publishes the static site on every push and
 every 30 minutes (after a feed refresh), with `noindex` added. Pages cannot run the viewing API, so property pages show
-the plain date/time enquiry form instead of the diary-based time picker.
+the plain date/time enquiry form instead of the diary-based time picker. It also has no `robots.txt`, sitemap, old-site
+redirects or per-property page tags; those need the Node server (see "SEO and going live").
 
 **Azure App Service** runs the same files plus the Node server, so the viewing-time API works:
 
@@ -127,10 +128,12 @@ az login
 - Needs the Azure CLI and a signed-in account. The script shows the subscription and asks before creating anything:
   a resource group, a Linux App Service plan (default `B1`, `-Sku F1` for the free tier) and a Node 20 web app.
 - It zips only what the site needs (pages, `assets/`, `data/`, `vendor/`, `server/` without tests, data or `.env`),
-  adds `noindex` (use `-Index` at launch), deploys, and checks `/api/health`. `-PackageOnly` builds the zip and touches
-  nothing in Azure.
+  adds `noindex` (use `-Index` at launch, see "Going live"), deploys, and checks `/api/health`. `-PackageOnly` builds
+  the zip and touches nothing in Azure.
 - App settings it sets: `HOST=0.0.0.0`, `TRUST_PROXY=1`, `DIARY_MODE=demo` (`-DiaryMode live` omits it) and
-  `DATA_DIR` / `GEOCACHE_FILE` under `/home/mpb-data`, which survives redeploys. HTTPS only, TLS 1.2, FTPS off.
+  `DATA_DIR` / `GEOCACHE_FILE` under `/home/mpb-data`, which survives redeploys. With `-Index` it also sets
+  `ALLOW_INDEXING=1` and `SITE_URL` (`-SiteUrl`, default `https://www.mypropertybox.co.uk`); without it those two are
+  removed, so re-running without `-Index` puts the site back into hidden-preview mode. HTTPS only, TLS 1.2, FTPS off.
 - Add CRM secrets afterwards as app settings, never in code:
   `az webapp config appsettings set -n <app> -g rg-mpb-preview --settings VECO_CLIENT_ID=... VECO_CLIENT_SECRET=... VECO_RESOURCE_IDS=...`
 - **The property feed on Azure is a snapshot** of `data/` at deploy time. To refresh it every 30 minutes, run
@@ -181,6 +184,53 @@ in `common.js`. That list drives the header **Call us** dialog (tap-to-call plus
 `callback` lead) and each property's "nearest office" line. The footers of the six HTML pages repeat the numbers
 as plain markup, so update them there too if a number changes. Rightmove tracking numbers are deliberately not used.
 
+## SEO and going live
+
+**What is built in.** Every page has a unique title and description, an absolute canonical URL, Open Graph and
+Twitter tags and JSON-LD: `WebSite` on the homepage, a `RealEstateAgent` (serving office name, number and town) plus
+`FAQPage` on each town page, `FAQPage` on other pages with FAQs, and `RealEstateListing` on each property page. Office
+street addresses, opening hours and ratings are not in the markup because none has been confirmed; add them to the
+`RealEstateAgent` block in `tools/build-pages.js` once they are. There is deliberately no `BreadcrumbList`: Google wants
+the markup to match a visible breadcrumb, and the pages have none. `404.html` is a branded `noindex` page.
+
+**What needs the Node server** (`server/server.js`). Static hosts such as GitHub Pages serve the pages but not these:
+
+| Feature | Behaviour |
+|---|---|
+| `robots.txt` | Disallows everything until `ALLOW_INDEXING=1`; then allows the site, blocks `/api/` and names the sitemap |
+| `sitemap.xml` | Every page plus a `property.html?id=` URL for each available, under-offer and let-agreed property (sold and let ones are left out and carry `noindex,follow`). Read from the feed, so it stays current |
+| Property page tags | `property.html?id=<id>` gets that listing's title, description, canonical URL, share image and `RealEstateListing` data in the HTML itself, so crawlers and link previews see it. An unknown id is a real 404 |
+| Old-site redirects (`server/redirects.js`) | 301s from the old PHP site: `property-details.php?id=` to the matching property (or to search if it is gone), `results-gallery.php`, `/buying/`, `/renting/`, town and area paths, `/payment.php` and `/article/...` (to the most relevant page, as the articles are not migrated). Checked against about 90 real old URLs in `server/test/fixtures/old-urls.txt` |
+| Canonical host | With `ALLOW_INDEXING`, requests for any other hostname are 301-redirected to `SITE_URL` (so `mypropertybox.co.uk` goes to `www`). Not applied to `/api/`, `localhost` or IP addresses |
+| Speed | gzip or brotli for text (the 485 KB property feed is about 50 KB over the wire), ETags and 304 responses |
+
+**Check before every release:** `node tools/seo-check.js` audits every page (title and description length and
+uniqueness, canonical, Open Graph, JSON-LD parses, one `h1`, image `alt` text, broken internal links and assets, links
+back to the old domain, orphan pages) and must report 0 problems. Warnings are advisory (mainly images without
+`width`/`height`). It also runs as part of `server/test/seo.test.js`.
+
+**Cut-over checklist.** Do these in order:
+
+1. Deploy to the Node host in hidden-preview mode and review it on its own address.
+2. Decide where `payment.php` lives. The card form on `payments.html` is still on the old site. Either keep the old site
+   running on another hostname (for example `old.mypropertybox.co.uk`) and rebuild the pages with
+   `PAYMENT_URL=https://old.mypropertybox.co.uk/payment.php node tools/build-pages.js`, or replace it. The audit warns
+   while the link still points at the live domain, because that address will be this site after the switch.
+3. Bind the custom domain and a TLS certificate to the app, and point DNS at it (`www` as a CNAME to the host, and the
+   bare domain forwarded to `www`). Lower the DNS TTL a day before.
+4. Redeploy with `-Index` (or set `ALLOW_INDEXING=1` and `SITE_URL=https://www.mypropertybox.co.uk` on any other
+   Node host). Then check `/robots.txt`, `/sitemap.xml`, a few old URLs from `old-urls.txt` and a property page.
+5. In **Google Search Console**, add the domain and submit `https://www.mypropertybox.co.uk/sitemap.xml`. Do the same in
+   Bing Webmaster Tools. The domain name is not changing, so no Change of Address is needed.
+6. Claim and update the **Google Business Profile** for each of the six offices, using the same name and phone number
+   as the town pages and the footer. These drive local map results far more than any on-page change.
+7. Watch Search Console's Pages and Crawl errors reports for a few weeks and add a redirect for any old URL that shows
+   as a 404.
+
+**Not done, by choice.** The ~45 old news articles are not migrated (they redirect to the nearest page); migrating them
+would need the article text. Hotlinked Unsplash images and Google Fonts are still third-party (self-hosting them would
+help speed and privacy). There is no `hreflang` (single-language site).
+
 ## Before going live
 
 - **Switch lead delivery on.** The Azure test app runs with `DIARY_MODE=demo`, which logs leads but never emails them.
@@ -212,7 +262,7 @@ as plain markup, so update them there too if a number changes. Rightmove trackin
 - **Still on the old site:** the instant valuation tool (it sends `X-Frame-Options: SAMEORIGIN`, so it cannot be
   embedded; the hero form is the on-site replacement) and the card payment form. Move these before the old domain is
   switched off.
-- Add a `sitemap.xml`, `robots.txt` and the real canonical domain, and remove the `noindex` injection.
+- Switch off the hidden preview by following "SEO and going live" above (`-Index`, domain, redirects, Search Console).
 
 - Set `LEAD.endpoint`. Alerts also need a back end (or CRM automation) to send the emails.
 - Rotate any CRM password that has been shared in chat or email, and use dedicated API or service accounts.

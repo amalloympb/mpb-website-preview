@@ -30,7 +30,8 @@ const person = { name: 'Test Person', email: 'test@example.com', phone: '07700 9
 
 test('static: site files are served, private files are not', async () => {
   assert.equal((await get('/')).status, 200);
-  assert.equal((await get('/property.html')).status, 200);
+  assert.equal((await get('/property.html?id=' + PID)).status, 200);
+  assert.equal((await get('/property.html')).status, 404, 'no listing, no page');
   assert.equal((await get('/data/properties.json')).status, 200);
   for (const p of ['/server/server.js', '/server/.env', '/server/data/leads-demo.jsonl', '/feed/sync.js', '/archive/', '/README.md', '/.env', '/%2e%2e/server/server.js', '/..%2fserver/server.js', '/data/../server/engine.js', '/index.html%00.png', '/package.json']) {
     const r = await get(p);
@@ -91,7 +92,7 @@ test('booking: validation, honeypot, success, double-booking and holds', async (
 
 test('booking: concurrent requests for one slot yield exactly one booking', async () => {
   const j = await (await get('/api/availability?property=' + PID2)).json();
-  const start = j.days[1].slots[2].start;
+  const start = j.days.find(d => d.slots.length > 2).slots[2].start;
   const rs = await Promise.all([1, 2, 3].map(() => post({ property: PID2, start, ...person })));
   assert.deepEqual(rs.map(r => r.status).sort(), [200, 409, 409]);
 });

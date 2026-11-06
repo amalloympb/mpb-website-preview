@@ -32,6 +32,10 @@ jobs:
         with:
           node-version: 20
 
+      # Fails the deploy if a page loses its title, canonical, structured data or gains a broken link.
+      - name: SEO audit
+        run: node tools/seo-check.js
+
       # Keeps the per-listing detail cache between runs so each refresh only fetches listings that changed.
       - uses: actions/cache@v4
         with:
