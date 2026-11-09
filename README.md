@@ -262,9 +262,10 @@ help speed and privacy). There is no `hreflang` (single-language site).
   For real leads: remove `DIARY_MODE` (deploy with `-DiaryMode live`), set the `SMTP_*`, `MAIL_FROM` and
   `LEAD_EMAIL_*` settings, then submit a test lead and check it arrives. Without them the server prints a warning at
   startup and leads only go to the private log.
-- **Confirm the facts.** The homepage and landing pages still say "seven offices" and list Cockermouth, but only six
-  offices have a confirmed number (the footer and call dialog show those six). The "15+ years", "£50m" and
-  "39-second valuation" claims have no evidence in this repo. The legal entity wording (My Property Box Ltd, MPB
+- **Confirm the facts.** The homepage and landing pages say "seven offices" and list Cockermouth (confirmed as
+  correct by the business), but only six offices have a confirmed phone number (the footer and call dialog show those
+  six). The stats strips show "15+ years", "Over £300m" and "30s" valuation, as supplied by the business. The legal
+  entity wording (My Property Box Ltd, MPB
   North West Ltd, Acorn) needs checking. Nothing here invents opening hours, fees, reviews or named staff.
 - **Office assignments for town pages** are an inference (for example Durham, Hartlepool, Middlesbrough and Stockton
   to Darlington, Sunderland, Gateshead and South Shields to Newcastle, Cockermouth to Carlisle). Correct them in
