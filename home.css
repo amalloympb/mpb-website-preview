@@ -14,7 +14,7 @@
 .hs-pop a small{color:var(--muted);font-size:.76rem}
 .hs-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px;margin-top:clamp(52px,6vw,80px)}
 .hs-head h3{margin:0;color:var(--head);font-size:clamp(1.9rem,3vw,2.6rem);line-height:1.1}
-.hs-all{display:inline-flex;align-items:center;min-height:44px;font:500 .74rem Roboto,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);border-bottom:1px solid transparent;transition:border-color .3s}
+.hs-all{display:inline-flex;align-items:center;min-height:44px;font:500 .82rem Roboto,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--acc-t);border-bottom:1px solid transparent;transition:border-color .3s}
 .hs-all:hover{border-bottom-color:currentColor}
 .hs-note{margin-top:18px;font-size:.8rem;color:var(--muted)}
 

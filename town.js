@@ -138,28 +138,17 @@
     };
 
     loadFeed().then(feed => {
-      const counts = {};
       blocks.forEach(b => {
         const s = b.dataset.listings, grid = $('.pg-grid', b), all = $('.tn-all', b);
         const live = feed.properties.filter(p => inSection(p, s) && isLive(p) && here(p));
-        counts[s] = live.length;
         all.href = `properties.html?section=${s}${q ? '&q=' + encodeURIComponent(q) : ''}`;
-        all.textContent = live.length ? `View all ${live.length} \u2192` : 'Search all properties \u2192';
+        all.textContent = 'Search all properties \u2192';
         if (!live.length) { empty(s, grid); return; }
         const pool = live.filter(p => p.status === 'available').sort((a, c) => a.rank - c.rank);
         const withPhoto = pool.filter(p => p.photo), rest = pool.filter(p => !p.photo);
         const items = [...withPhoto, ...rest, ...live.filter(p => p.status !== 'available')].slice(0, 3);
         grid.replaceChildren(...items.map(card));
       });
-      const tours = feed.properties.filter(p => inSection(p, 'sales') && isLive(p) && here(p) && p.has_tour).length;
-      const strip = $('#tnStats');
-      if (strip) {
-        const set = (k, v, small) => { const c = $(`[data-stat=${k}]`, strip); $('b', c).textContent = v; c.classList.toggle('tn-word', /\D/.test(v)); if (small) $('small', c).textContent = small; };
-        if (counts.sales) set('sales', String(counts.sales)); else set('sales', 'Sales', `Free valuations in ${town}`);
-        if (counts.lets) set('lets', String(counts.lets)); else set('lets', 'Lettings', `Free rental appraisals in ${town}`);
-        if (tours) set('third', String(tours), tours === 1 ? 'Sale with a 360\u00b0 virtual tour' : 'Sales with 360\u00b0 virtual tours');
-        strip.hidden = false;
-      }
     }).catch(() => {
       blocks.forEach(b => {
         const grid = $('.pg-grid', b), box = el('div', 'empty'), row = el('div', 'row');

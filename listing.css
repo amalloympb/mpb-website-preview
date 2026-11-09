@@ -2,7 +2,7 @@
 .pg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:30px;margin-top:30px}
 .pc{position:relative;display:flex;flex-direction:column;min-width:0;background:var(--surface);border:1px solid var(--line);transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .5s,border-color .3s}
 .pc:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--acc) 40%,var(--line))}
-.pc:has(.pc-link:focus-visible){outline:2px solid var(--acc);outline-offset:3px}
+.pc:has(.pc-link:focus-visible){outline:2px solid var(--acc-t);outline-offset:3px}
 .pc-img{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--soft)}
 .pc-img img{width:100%;height:100%;object-fit:cover;transition:transform 1s cubic-bezier(.2,.7,.2,1)}
 .pc:hover .pc-img img{transform:scale(1.05)}

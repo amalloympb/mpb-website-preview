@@ -59,6 +59,20 @@ test('sitemap lists pages and live properties only, with escaped absolute URLs',
   assert.ok(!/index\.html|property\.html<|404\.html/.test(xml));
 });
 
+test('private pages are noindex, have no canonical and are left out of the sitemap', async () => {
+  const files = seo.pageFiles(ROOT);
+  for (const f of seo.PRIVATE_PAGES) {
+    assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} exists`);
+    assert.ok(!files.includes(f), `${f} is not listed for the sitemap`);
+    const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.match(html, /<meta name="robots" content="noindex">/);
+    assert.ok(!/rel="canonical"/.test(html));
+    assert.equal((await get('/' + f)).status, 200, `${f} is reachable by its address`);
+  }
+  const nav = fs.readFileSync(path.join(ROOT, 'sell.html'), 'utf8');
+  for (const f of seo.PRIVATE_PAGES) assert.ok(!nav.includes(f), `${f} is not linked from the header or footer`);
+});
+
 test('robots.txt blocks everything until indexing is switched on', () => {
   assert.equal(seo.robotsTxt({ allow: false }), 'User-agent: *\nDisallow: /\n');
   const on = seo.robotsTxt({ allow: true });

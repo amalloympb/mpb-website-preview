@@ -96,12 +96,6 @@
     sortSel.value = S.sort;
     $('#soldLbl').textContent = SECTIONS[S.section].soldLbl;
   };
-  const updateCounts = () => {
-    Object.keys(SECTIONS).forEach(s => { $('#cnt-' + s).textContent = all.filter(p => inSection(p, s) && gate(p)).length; });
-    const n = all.filter(p => inSection(p, S.section) && gate(p) && p.has_tour).length;
-    $('#tourN').textContent = '(' + n + ')';
-  };
-
   // ---- URL state ----
   const writeUrl = () => {
     const q = new URLSearchParams();
@@ -245,11 +239,14 @@
     syncForm(); buildNames(); apply();
   };
 
+  // Totals are only shown once a visitor has narrowed the search
+  const narrowed = () => !!(S.q || S.min || S.max || S.beds || S.type || S.tour);
+
   const render = () => {
-    const n = F.length, sec = SECTIONS[S.section];
+    const n = F.length, sec = SECTIONS[S.section], nar = narrowed();
     const where = S.saved ? '' : S.q ? ' in ' + S.q : '';
-    $('#resTitle').textContent = S.saved ? `Your shortlist (${n})` : n ? `${n} ${n === 1 ? 'property' : sec.head}${where}` : 'No properties found';
-    $('#resSub').textContent = S.saved ? 'Saved on this device only.' : n && S.view === 'grid' ? `Showing ${Math.min(S.shown, n)} of ${n}` : '';
+    $('#resTitle').textContent = S.saved ? `Your shortlist (${n})` : !n ? 'No properties found' : nar ? `${n} ${n === 1 ? 'property' : sec.head}${where}` : sec.head.charAt(0).toUpperCase() + sec.head.slice(1);
+    $('#resSub').textContent = S.saved ? 'Saved on this device only.' : n && nar && S.view === 'grid' ? `Showing ${Math.min(S.shown, n)} of ${n}` : '';
     favBtn.setAttribute('aria-pressed', S.saved);
     alertBtn.hidden = S.saved;
     renderChips();
@@ -261,7 +258,7 @@
     if (!n) { grid.replaceChildren(emptyState()); rendered = 0; moreWrap.hidden = true; return; }
     renderGrid(false);
     moreWrap.hidden = S.shown >= n;
-    $('#moreTxt').textContent = `Showing ${Math.min(S.shown, n)} of ${n} properties`;
+    $('#moreTxt').textContent = nar ? `Showing ${Math.min(S.shown, n)} of ${n} properties` : '';
   };
 
   function apply(keepShown) {
@@ -269,7 +266,6 @@
     if (!keepShown) S.shown = PAGE;
     F = filtered();
     document.body.dataset.nudge = S.section === 'sales' ? 'sell' : 'let';
-    updateCounts();
     render();
     writeUrl();
   }
@@ -402,8 +398,8 @@
     S.shown += PAGE;
     const first = renderGrid(true);
     moreWrap.hidden = S.shown >= F.length;
-    $('#moreTxt').textContent = `Showing ${Math.min(S.shown, F.length)} of ${F.length} properties`;
-    $('#resSub').textContent = `Showing ${Math.min(S.shown, F.length)} of ${F.length}`;
+    $('#moreTxt').textContent = narrowed() ? `Showing ${Math.min(S.shown, F.length)} of ${F.length} properties` : '';
+    $('#resSub').textContent = narrowed() ? `Showing ${Math.min(S.shown, F.length)} of ${F.length}` : '';
     const next = $$('.pc', grid)[first];
     if (next) $('.pc-link', next).focus({ preventScroll: true });
     track('mpb_search_more');
@@ -488,7 +484,7 @@
     });
     cluster.addLayers(pins);
     if (pins.length) map.fitBounds(cluster.getBounds().pad(0.12), { maxZoom: 14 });
-    $('#resSub').textContent = `${pins.length} on the map`;
+    $('#resSub').textContent = narrowed() ? `${pins.length} on the map` : '';
     note.textContent = 'Pin positions are approximate. Select a pin to see the property.';
   }
 
@@ -559,9 +555,8 @@
   skeleton(6);
   const start = () => loadFeed().then(feed => {
     all = feed.properties.map(p => Object.assign(p, { _p: ' ' + norm(`${p.locality} ${p.hub} ${p.town}`) }));
-    const live = all.filter(p => p.status === 'available' || p.status === 'sstc').length;
     const when = ago(feed.generated);
-    $('#feedMeta').textContent = `${live} properties available` + (when ? ` \u00b7 Updated ${when}` : '');
+    $('#feedMeta').textContent = when ? `Updated ${when}` : '';
     readUrl();
     ready = true;
     syncForm();

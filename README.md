@@ -12,6 +12,7 @@ Static site. No build step.
 | `contact.html`, `about.html`, `tenants.html` | Replace the old-site contact, about and tenants pages: enquiry form and office numbers, company overview, renting guide |
 | `privacy.html`, `cookies.html`, `terms.html`, `complaints.html` | Legal pages copied from the old site: privacy summary plus the full PDF (`assets/legal/privacy-policy.pdf`), cookies, website terms, in-house complaints procedure |
 | `careers.html`, `payments.html` | Careers (no vacancies listed) and online payments (card payment opens on the old site, bank transfer details) |
+| `meet-the-team.html` | **Private (unlisted) page.** Team cards, filled from `content/team.json`. See "Meet the team and Ben's message" below |
 | `properties.html` | Property search (grid, map, filters, saved homes, alerts) |
 | `property.html?id=<id>` | Property page: gallery, 360 tour, map, cost guide, viewing booking, lead capture |
 
@@ -30,6 +31,30 @@ node tools/build-pages.js
 Never edit those HTML files by hand, as the next run overwrites them. The generator copies the header and footer from
 `sell.html`, so change the footer in the six hand-written pages (`index`, `sell`, `let`, `landlords`, `properties`,
 `property`) and re-run it. Behaviour lives in `town.js` and `town.css`.
+
+### Meet the team and Ben's message
+
+`meet-the-team.html` and the "A word from Ben" section on `about.html` are built from `content/team.json`:
+
+- `ben`: `name`, `role`, `photo` (a path such as `assets/team/ben.jpg`) and `message` (a list of paragraphs).
+  The About section stays hidden until Ben has a name and at least one paragraph, so nothing is made up.
+- `members`: one object per person, with their name, role, office, photo and short bio. Put photos in `assets/team/`.
+
+Edit the file, run `node tools/build-pages.js`, then commit.
+
+The team page is **unlisted, not password protected**. It is `noindex`, has no canonical, is left out of the sitemap
+and is not linked from the nav or footer, but anyone with the address can open it. To publish it later: remove it from
+`PRIVATE_PAGES` in `server/seo.js`, drop `noindex` from its entry in `tools/build-pages.js`, link it from the
+footer or About page, and rebuild.
+
+### Content notes
+
+- The sales page has a "Services under one roof" block and an "Auction in another box" block (with the I Am Sold
+  Modern Method of Auction wording supplied by the business) plus an auction FAQ.
+- Financial Services has been removed from the site. The landlords page has a "Free management review" tile in its place.
+- Property totals are not advertised. A count appears only after a visitor narrows a search.
+- The accent is the logo mint (`--acc`). Small text uses `--acc-t` (navy on light backgrounds) so it stays legible.
+  Change both in the theme tokens at the top of `styles.css`.
 
 ## Run locally
 

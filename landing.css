@@ -20,7 +20,7 @@
 .lp-card .wz-nav .btn{padding:20px 30px}
 .lp-card .lp-trust{display:flex;align-items:center;gap:10px;margin-top:18px;font-size:.78rem;color:var(--muted)}
 .lp-card .lp-trust .ic{width:16px;height:16px;color:var(--acc)}
-.lp-card :focus-visible{outline-color:var(--acc)}
+.lp-card :focus-visible{outline-color:var(--acc-t)}
 .lp-card .fgrid .full.ck-row{margin-top:2px}
 .lp-card .ck{padding-inline:0}
 .lp-card .ck:hover{background:none}
@@ -39,8 +39,26 @@ html[data-theme=dark] .lp-benefits article{--spot:rgba(145,209,185,.14)}
 .lp-benefits .ic{width:34px;height:34px;stroke-width:1.1;color:var(--acc);margin-bottom:22px}
 .lp-benefits h3{font-size:1.7rem;line-height:1.15;color:var(--head);margin-bottom:10px}
 .lp-benefits p{font-size:.96rem;color:var(--muted)}
-.lp-benefits a.more{margin-top:18px;color:var(--acc)}
+.lp-benefits a.more{margin-top:18px;color:var(--acc-t)}
 .lp-benefits a.more .ic{width:16px;height:16px;margin:0;stroke-width:1.5}
+
+/* SERVICES UNDER ONE ROOF */
+.lp-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(40px,7vw,110px);align-items:center}
+.lp-split .sec-head{margin-bottom:0}
+.lp-roof{list-style:none;display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.lp-roof li{display:flex;align-items:center;gap:18px;padding:26px 24px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);font:500 .84rem Roboto,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--head)}
+.lp-roof .ic{box-sizing:content-box;width:24px;height:24px;padding:11px;border-radius:50%;background:var(--acc);color:var(--navy-d);stroke-width:1.4}
+
+/* AUCTION */
+.lp-auction{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:30px clamp(40px,6vw,90px);align-items:center;padding:clamp(34px,5vw,72px);background:linear-gradient(135deg,var(--navy-d),var(--navy));color:#fff;border:1px solid rgba(255,255,255,.12)}
+.lp-auction h2{font-size:clamp(2.2rem,4vw,3.4rem);color:#fff}
+.lp-auction h2 em,.lp-auction .kicker{color:var(--mint)}
+.lp-auction p{color:rgba(255,255,255,.84);font-weight:300;max-width:56ch}
+.lp-auction .row{margin-top:28px}
+.lp-auction-facts{list-style:none;border-top:1px solid rgba(255,255,255,.18)}
+.lp-auction-facts li{padding:24px 0;border-bottom:1px solid rgba(255,255,255,.18)}
+.lp-auction-facts b{display:block;font:500 2.6rem/1.05 var(--serif);color:var(--mint)}
+.lp-auction-facts small{display:block;margin-top:6px;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.72)}
 
 /* PROCESS */
 .lp-process{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(40px,7vw,110px);align-items:start}
@@ -69,9 +87,9 @@ html[data-theme=dark] .lp-benefits article{--spot:rgba(145,209,185,.14)}
 .lp-faq details{border-bottom:1px solid var(--line)}
 .lp-faq summary{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 0;cursor:pointer;list-style:none;font:500 clamp(1.3rem,1.8vw,1.6rem)/1.25 var(--serif);color:var(--head);transition:color .3s}
 .lp-faq summary::-webkit-details-marker{display:none}
-.lp-faq summary::after{content:"+";flex:none;font:300 1.8rem/1 Roboto,sans-serif;color:var(--acc);transition:transform .35s}
+.lp-faq summary::after{content:"+";flex:none;font:300 1.8rem/1 Roboto,sans-serif;color:var(--acc-t);transition:transform .35s}
 .lp-faq details[open] summary::after{transform:rotate(45deg)}
-.lp-faq summary:hover{color:var(--acc)}
+.lp-faq summary:hover{color:var(--acc-t)}
 .lp-faq details p{padding:0 40px 26px 0;color:var(--muted);max-width:62ch}
 .lp-faq details p+p{margin-top:-10px}
 .lp-faq-note{margin-top:22px;font-size:.8rem;color:var(--muted)}
@@ -86,7 +104,7 @@ html[data-theme=dark] .lp-benefits article{--spot:rgba(145,209,185,.14)}
 .lp-tiers{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
 .lp-tier{display:flex;flex-direction:column;align-items:flex-start;padding:40px 34px 38px;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
 .lp-tier.hl{box-shadow:inset 0 3px 0 var(--acc)}
-.lp-tier .tag{margin-bottom:18px;font-size:.68rem;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:var(--acc)}
+.lp-tier .tag{margin-bottom:18px;font-size:.78rem;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--acc-t)}
 .lp-tier h3{font-size:1.9rem;line-height:1.12;color:var(--head);margin-bottom:10px}
 .lp-tier .tier-sub{margin-bottom:22px;color:var(--muted);font-size:.96rem}
 .tier-list{list-style:none;display:grid;gap:14px;margin-bottom:34px;font-size:.96rem;color:var(--text)}
@@ -129,7 +147,7 @@ html[data-theme=dark] .lp-benefits article{--spot:rgba(145,209,185,.14)}
 .hc-todo p{margin-top:6px;font-size:.92rem;color:var(--muted)}
 .hc-tag{padding:4px 8px;border:1px solid currentColor;font:500 .62rem Roboto,sans-serif;letter-spacing:.14em;text-transform:uppercase}
 .hc-tag.no{color:var(--err)}
-.hc-tag.q{color:var(--acc)}
+.hc-tag.q{color:var(--acc-t)}
 .hc-ok{list-style:none;display:grid;gap:2px 24px;grid-template-columns:1fr 1fr}
 .hc-ok li{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:.92rem;color:var(--text)}
 .hc-ok .ic{flex:none;width:16px;height:16px;color:var(--acc)}
@@ -148,7 +166,7 @@ html[data-theme=dark] .lp-benefits article{--spot:rgba(145,209,185,.14)}
   .lp-tiers{grid-template-columns:1fr}
   .hc-grid{grid-template-columns:1fr}
   .hc-copy{position:static}
-  .lp-process,.lp-faq-wrap{grid-template-columns:1fr}
+  .lp-process,.lp-faq-wrap,.lp-split,.lp-auction{grid-template-columns:1fr}
   .lp-faq-wrap .sec-head{position:static;margin-bottom:34px}
   .lp-magnet{grid-template-columns:1fr}
 }
@@ -157,6 +175,7 @@ html[data-theme=dark] .lp-benefits article{--spot:rgba(145,209,185,.14)}
   .lp-pts,.lp-mini{display:none}
   .lp-copy .lead{margin-bottom:6px}
   .lp-benefits,.lp-benefits.four{grid-template-columns:1fr}
+  .lp-roof{grid-template-columns:1fr}
   .lp-tier{padding:30px 24px}
   .hc-top{gap:16px}
   .hc-score{width:78px;height:78px}

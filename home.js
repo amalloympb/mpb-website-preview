@@ -78,14 +78,13 @@
   const render = () => {
     const s = section, t = tally(s), items = latest(s);
     head.textContent = COPY[s].head;
-    viewAll.textContent = `View all ${live(s).length} \u2192`;
+    viewAll.textContent = 'View all \u2192';
     viewAll.href = 'properties.html?section=' + s;
     fillPrice();
     places.replaceChildren(...t.names.map(n => opt(n, '')));
-    pop.replaceChildren(...(t.hubs.length ? [el('span', '', 'Popular:')] : []), ...t.hubs.map(([n, c]) => {
-      const a = el('a', '', n + ' ');
+    pop.replaceChildren(...(t.hubs.length ? [el('span', '', 'Popular:')] : []), ...t.hubs.map(([n]) => {
+      const a = el('a', '', n);
       a.href = `properties.html?section=${s}&q=${encodeURIComponent(n)}`;
-      a.append(el('small', '', String(c)));
       return a;
     }));
     if (!items.length) return message('No properties listed right now', 'New properties are added all the time. Search all of our listings, or ask us to let you know first.');

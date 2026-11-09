@@ -1,0 +1,10 @@
+{
+  "_help": "Content for 'A word from Ben' (about.html) and the private team page (meet-the-team.html). Edit this file, then run: node tools/build-pages.js. Photos go in assets/team/ (portrait, roughly 4:5). Leave 'message' empty and the About section stays hidden.",
+  "ben": {
+    "name": "Ben Quaintrell",
+    "role": "Founder and CEO",
+    "photo": "",
+    "message": []
+  },
+  "members": []
+}

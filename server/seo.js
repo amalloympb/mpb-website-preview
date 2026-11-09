@@ -12,7 +12,10 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const money = n => '\u00a3' + Math.round(n).toLocaleString('en-GB');
 
 // ---- Sitemap and robots ----
-const NOT_PAGES = new Set(['property.html', '404.html']);
+// Private pages are unlisted: noindex, no canonical, no links from the site and no place in the sitemap.
+// To publish one, remove it here, drop `noindex` from its entry in tools/build-pages.js, link it, and rebuild.
+const PRIVATE_PAGES = new Set(['meet-the-team.html']);
+const NOT_PAGES = new Set(['property.html', '404.html', ...PRIVATE_PAGES]);
 const LISTED = new Set(['available', 'sstc', 'let-agreed']);
 
 const pageFiles = root => fs.readdirSync(root).filter(f => f.endsWith('.html') && !NOT_PAGES.has(f)).sort((a, b) => (a === 'index.html' ? -1 : b === 'index.html' ? 1 : a.localeCompare(b)));
@@ -103,4 +106,4 @@ function injectProperty(html, m) {
 // The 404 page is served from arbitrary paths, so its relative links need a base.
 const withBase = html => html.replace('<head>', () => '<head>\n<base href="/">');
 
-module.exports = { site, indexingAllowed, pageFiles, pageUrl, propertyUrl, sitemapXml, robotsTxt, canonicalRedirect, propertyMeta, injectProperty, withBase, LISTED, NOT_PAGES };
+module.exports = { site, indexingAllowed, pageFiles, pageUrl, propertyUrl, sitemapXml, robotsTxt, canonicalRedirect, propertyMeta, injectProperty, withBase, LISTED, NOT_PAGES, PRIVATE_PAGES };

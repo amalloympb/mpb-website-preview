@@ -241,12 +241,12 @@ ${leadForm({
     </div>
   </section>
 
-  <section class="trust lp-trust-strip" id="tnStats" aria-label="${esc(p.name)} at a glance" hidden>
+  <section class="trust lp-trust-strip" id="tnStats" aria-label="${esc(p.name)} at a glance">
     <div class="wrap stats">
       <div class="stats-grid">
-        <div data-stat="sales"><b>0</b><small>Homes for sale in ${esc(p.name)}</small></div>
-        <div data-stat="lets"><b>0</b><small>Properties to let in ${esc(p.name)}</small></div>
-        <div data-stat="third" class="tn-word"><b>Rightmove</b><small>Plus our own property search</small></div>
+        <div class="tn-word"><b>Sales</b><small>Free valuations in ${esc(p.name)}</small></div>
+        <div class="tn-word"><b>Lettings</b><small>Free rental appraisals in ${esc(p.name)}</small></div>
+        <div class="tn-word"><b>Rightmove</b><small>Plus our own property search</small></div>
         <div><b>&pound;0</b><small>Cost of your valuation</small></div>
       </div>
     </div>
@@ -519,6 +519,54 @@ const officeCards = () => OFFICES.map(o => {
 
 const REGISTERED = 'My Property Box Ltd is registered in England & Wales. Registered office: Alton House, 27-31 Grange Road, Darlington, County Durham, DL1 5NA. Company number 08140860.';
 
+// ---- Team content (content/team.json): Ben's message on About, and the private team page ----
+const TEAM = JSON.parse(read('content/team.json'));
+const initials = n => String(n).split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const portrait = m => `<div class="tm-pic">${m.photo
+  ? `<img src="${esc(m.photo)}" alt="${esc(m.name)}" width="480" height="600" loading="lazy" decoding="async">`
+  : `<span class="tm-init" aria-hidden="true">${esc(initials(m.name))}</span>`}</div>`;
+
+// Shown only once Ben's words have been supplied, so nothing is invented in his name
+const benSection = () => {
+  const b = TEAM.ben || {};
+  const paras = (b.message || []).map(s => String(s).trim()).filter(Boolean);
+  if (!b.name || !paras.length) return '';
+  return `
+  <section class="section alt" id="ben" aria-labelledby="ben-title">
+    <div class="wrap tm-ben">
+      <figure class="tm-ben-pic">${portrait(b)}</figure>
+      <div class="tm-ben-copy">
+        <p class="kicker">From our founder</p>
+        <h2 id="ben-title">A word from <em>${esc(b.name.split(/\s+/)[0])}.</em></h2>
+        ${paras.map(p => `<p>${esc(p)}</p>`).join('\n        ')}
+        <p class="tm-sign"><b>${esc(b.name)}</b><span>${esc(b.role || '')}</span></p>
+      </div>
+    </div>
+  </section>
+`;
+};
+
+const teamBody = () => {
+  const b = TEAM.ben || {};
+  const people = [...(b.name ? [{ name: b.name, role: b.role, photo: b.photo }] : []), ...(TEAM.members || [])].filter(m => m && m.name);
+  const card = m => {
+    const where = m.office ? (officeById[m.office] ? officeById[m.office].name + ' office' : m.office) : '';
+    return `<article class="tm-card">
+          ${portrait(m)}
+          <div class="tm-card-b">
+            <h3>${esc(m.name)}</h3>${m.role ? `
+            <p class="tm-role">${esc(m.role)}</p>` : ''}${where ? `
+            <p class="tm-office">${esc(where)}</p>` : ''}${m.bio ? `
+            <p class="tm-bio">${esc(m.bio)}</p>` : ''}
+          </div>
+        </article>`;
+  };
+  return `        <div class="tm-grid">
+        ${people.map(card).join('\n        ')}
+        </div>${(TEAM.members || []).length ? '' : `
+        <p class="doc-note">More team profiles will appear here once they have been supplied.</p>`}`;
+};
+
 const SERVICE_PAGES = [
   {
     file: 'hmo.html',
@@ -749,6 +797,7 @@ const SERVICE_PAGES = [
       ['pin', 'Local teams across the North East, North Yorkshire and Cumbria']
     ],
     heroRow: '<a class="btn btn-mint" href="index.html#valuation">Get my free valuation</a>\n          <a class="btn btn-ghost" href="contact.html">Contact us</a>',
+    live: benSection(),
     info: {
       kicker: 'What we do', h2: 'A complete <em>property service.</em>', four: true,
       sub: 'From marketing and maintenance to compliance and communication.',
@@ -1025,6 +1074,15 @@ const DOC_PAGES = [
         <div class="row">
           <button type="button" class="btn btn-line" data-call>Call your local office</button>
         </div>`
+  },
+  {
+    file: 'meet-the-team.html', toc: false, noindex: true, wide: true,
+    title: 'Meet the Team | My Property Box',
+    desc: 'Meet the My Property Box team: local estate and letting experts across the North East, North Yorkshire and Cumbria.',
+    eyebrow: 'Meet the team',
+    h1: 'The people behind <em>My Property Box.</em>',
+    lead: 'Local estate and letting experts across the North East, North Yorkshire and Cumbria.',
+    body: teamBody()
   },
   {
     file: '404.html', toc: false, noindex: true,

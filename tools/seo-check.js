@@ -5,6 +5,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { PRIVATE_PAGES } = require('../server/seo');
+
 const ROOT = path.resolve(__dirname, '..');
 const SITE = (process.env.SITE_URL || 'https://www.mypropertybox.co.uk').replace(/\/+$/, '');
 
@@ -47,7 +49,11 @@ function audit(root = ROOT) {
     const P = m => add(problems, file, m), W = m => add(warnings, file, m);
 
     if (!/<html[^>]*\blang="en-GB"/i.test(html)) P('missing lang="en-GB"');
-    if (/noindex/i.test(head)) P('source contains noindex (the host adds it for previews)');
+    const priv = PRIVATE_PAGES.has(file);
+    if (priv) {
+      if (!/<meta name="robots" content="noindex"/i.test(head)) P('private page must be noindex');
+      if (/rel="canonical"/i.test(head)) P('private page must not have a canonical');
+    } else if (/noindex/i.test(head)) P('source contains noindex (the host adds it for previews)');
 
     const title = text((/<title>([\s\S]*?)<\/title>/i.exec(head) || [])[1] || '');
     if (!title) P('missing <title>');
@@ -66,14 +72,16 @@ function audit(root = ROOT) {
 
     const canon = (/<link\b[^>]*rel="canonical"[^>]*>/i.exec(head) || [])[0];
     const canonHref = canon ? attr(canon, 'href') : null;
-    if (!canonHref) P('missing canonical');
-    else if (canonHref !== expectedCanonical(file)) P(`canonical is "${canonHref}", expected "${expectedCanonical(file)}"`);
+    if (!priv) {
+      if (!canonHref) P('missing canonical');
+      else if (canonHref !== expectedCanonical(file)) P(`canonical is "${canonHref}", expected "${expectedCanonical(file)}"`);
+    }
 
     const og = k => metaContent(head, 'property', k);
     if (file !== 'property.html') {
       if (!og('og:title')) P('missing og:title');
       if (!og('og:description')) P('missing og:description');
-      if (og('og:url') !== expectedCanonical(file)) P(`og:url is "${og('og:url')}", expected "${expectedCanonical(file)}"`);
+      if (!priv && og('og:url') !== expectedCanonical(file)) P(`og:url is "${og('og:url')}", expected "${expectedCanonical(file)}"`);
       if (!/^https:\/\//.test(og('og:image') || '')) P('og:image must be an absolute https URL');
       if (!metaContent(head, 'name', 'twitter:card')) P('missing twitter:card');
     }
@@ -112,7 +120,7 @@ function audit(root = ROOT) {
       if (inbound.has(clean) && clean !== file) inbound.set(clean, inbound.get(clean) + 1);
     }
   }
-  for (const [f, n] of inbound) if (n === 0 && f !== 'index.html' && f !== 'property.html') add(warnings, f, 'no other page links here (orphan)');
+  for (const [f, n] of inbound) if (n === 0 && f !== 'index.html' && f !== 'property.html' && !PRIVATE_PAGES.has(f)) add(warnings, f, 'no other page links here (orphan)');
   return { problems, warnings, pages: files.length };
 }
 
