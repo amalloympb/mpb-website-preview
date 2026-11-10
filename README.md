@@ -94,7 +94,7 @@ The property page can offer real viewing times based on the negotiators' diaries
   Add a source by creating `server/diary/<name>.js` that exports `{ name, configured(), getBusy({ fresh }) }`
   (`getBusy` resolves to the negotiators and their events, as in `mock.js` / `veco.js`), and choosing it in
   `server/diary/index.js`.
-- **Tests:** `node --test --test-concurrency=1 server/test/engine.test.js server/test/api.test.js server/test/veco.test.js server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js server/test/seo.test.js server/test/redirects.test.js feed/test/rightmove.test.js`
+- **Tests:** `node --test --test-concurrency=1 server/test/engine.test.js server/test/api.test.js server/test/veco.test.js server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js server/test/seo.test.js server/test/redirects.test.js server/test/refresh.test.js feed/test/rightmove.test.js`
 - **Deploying:** run behind HTTPS with `HOST=0.0.0.0` and `TRUST_PROXY=1`. Keep `server/.env` and `server/data/`
   private (they are in `.gitignore`, and the server refuses to serve `server/`, `feed/` and dotfiles).
 - Unverified until tested on real Veco data: recurrence numbering, time zone handling of repeating events and
@@ -122,7 +122,8 @@ node --test feed/test/rightmove.test.js    # adapter tests
   committed `data/`. Run it on demand from the Actions tab (**Run workflow**).
   - GitHub cron is best effort (runs can start a few minutes late) and GitHub switches scheduled workflows off
     after 60 days with no repository activity.
-  - For Azure or self-hosting, run `node feed/sync.js` from cron or Task Scheduler instead.
+  - For Render, Azure or self-hosting, set `FEED_REFRESH_MINUTES=30` and the server refreshes itself (see "Hosting"),
+    or run `node feed/sync.js` from cron or Task Scheduler instead.
 - **More Rightmove branches.** Set `RIGHTMOVE_BRANCHES="90144:Carlisle,90147:Penrith,<id>:<name>"`. The branch id is
   the number at the end of the branch's Rightmove URL.
 - **Safe by design.** The Rightmove adapter identifies itself, waits at least 0.8s between requests, retries
@@ -143,6 +144,26 @@ every 30 minutes (after a feed refresh), with `noindex` added. Pages cannot run 
 the plain date/time enquiry form instead of the diary-based time picker. It also has no `robots.txt`, sitemap, old-site
 redirects or per-property page tags; those need the Node server (see "SEO and going live").
 
+**Render (recommended while Azure sign-in is blocked)** runs the same files plus the Node server, deployed straight from
+the GitHub repo using `render.yaml`. About $7 a month for the Starter service plus $0.25 a month for the 1 GB disk that
+keeps leads and the postcode cache across deploys.
+
+1. Sign in at render.com with GitHub and allow it to read `amalloympb/mpb-website-preview`.
+2. **New > Blueprint**, choose the repo. Render reads `render.yaml` and creates the service and disk.
+3. Once it is live, open the service **Environment** tab and add the real settings (never in code): `SMTP_HOST`,
+   `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `LEAD_EMAIL_TO` (and the per-office `LEAD_EMAIL_*`).
+   Then delete `DIARY_MODE` so enquiries are emailed and booking times stop being sample data.
+4. At launch add `ALLOW_INDEXING=1` and `SITE_URL=https://www.mypropertybox.co.uk`, then point the domain at Render
+   (service **Settings > Custom Domains**).
+
+The blueprint sets `HOST`, `TRUST_PROXY`, `DATA_DIR` / `GEOCACHE_FILE` on the disk (`/var/data`), `DIARY_MODE=demo`,
+`FEED_REFRESH_MINUTES=30` and the `/api/health` check. Every push to `main` redeploys. Until `ALLOW_INDEXING` is set the
+site is hidden from search engines.
+
+**Property feed refresh on a Node host.** With `FEED_REFRESH_MINUTES=30` the server runs `node feed/sync.js` itself a
+minute after start and then every 30 minutes (minimum 5), never two at once. A failed run is logged and the previous
+listings stay. Works the same on Render, Azure or any other Node host. Leave it unset for local runs.
+
 **Azure App Service** runs the same files plus the Node server, so the viewing-time API works:
 
 ```
@@ -152,18 +173,16 @@ az login
 
 - Needs the Azure CLI and a signed-in account. The script shows the subscription and asks before creating anything:
   a resource group, a Linux App Service plan (default `B1`, `-Sku F1` for the free tier) and a Node 20 web app.
-- It zips only what the site needs (pages, `assets/`, `data/`, `vendor/`, `server/` without tests, data or `.env`),
-  adds `noindex` (use `-Index` at launch, see "Going live"), deploys, and checks `/api/health`. `-PackageOnly` builds
-  the zip and touches nothing in Azure.
-- App settings it sets: `HOST=0.0.0.0`, `TRUST_PROXY=1`, `DIARY_MODE=demo` (`-DiaryMode live` omits it) and
-  `DATA_DIR` / `GEOCACHE_FILE` under `/home/mpb-data`, which survives redeploys. With `-Index` it also sets
-  `ALLOW_INDEXING=1` and `SITE_URL` (`-SiteUrl`, default `https://www.mypropertybox.co.uk`); without it those two are
-  removed, so re-running without `-Index` puts the site back into hidden-preview mode. HTTPS only, TLS 1.2, FTPS off.
+- It zips only what the site needs (pages, `assets/`, `data/`, `vendor/`, `server/` and `feed/` without tests, data or
+  `.env`), adds `noindex` (use `-Index` at launch, see "Going live"), deploys, and checks `/api/health`.
+  `-PackageOnly` builds the zip and touches nothing in Azure.
+- App settings it sets: `HOST=0.0.0.0`, `TRUST_PROXY=1`, `FEED_REFRESH_MINUTES=30`, `DIARY_MODE=demo`
+  (`-DiaryMode live` omits it) and `DATA_DIR` / `GEOCACHE_FILE` under `/home/mpb-data`, which survives redeploys. With
+  `-Index` it also sets `ALLOW_INDEXING=1` and `SITE_URL` (`-SiteUrl`, default `https://www.mypropertybox.co.uk`);
+  without it those two are removed, so re-running without `-Index` puts the site back into hidden-preview mode. HTTPS
+  only, TLS 1.2, FTPS off.
 - Add CRM secrets afterwards as app settings, never in code:
   `az webapp config appsettings set -n <app> -g rg-mpb-preview --settings VECO_CLIENT_ID=... VECO_CLIENT_SECRET=... VECO_RESOURCE_IDS=...`
-- **The property feed on Azure is a snapshot** of `data/` at deploy time. To refresh it every 30 minutes, run
-  `node feed/sync.js` on a schedule and redeploy (for example a scheduled GitHub Actions job using
-  `azure/webapps-deploy`, or an Azure Function / Logic App). That is not set up yet.
 - Remove everything when finished: `az group delete --name rg-mpb-preview`.
 - Checked without an Azure subscription: the zip builds with Linux-style paths, the extracted package starts with the
   production settings and serves the pages and `/api/health`, and the script stops cleanly when not signed in. It has
@@ -258,8 +277,9 @@ help speed and privacy). There is no `hreflang` (single-language site).
 
 ## Before going live
 
-- **Switch lead delivery on.** The Azure test app runs with `DIARY_MODE=demo`, which logs leads but never emails them.
-  For real leads: remove `DIARY_MODE` (deploy with `-DiaryMode live`), set the `SMTP_*`, `MAIL_FROM` and
+- **Switch lead delivery on.** The test deployment runs with `DIARY_MODE=demo`, which logs leads but never emails them.
+  For real leads: remove `DIARY_MODE` (on Azure deploy with `-DiaryMode live`, on Render delete the variable), set the
+  `SMTP_*`, `MAIL_FROM` and
   `LEAD_EMAIL_*` settings, then submit a test lead and check it arrives. Without them the server prints a warning at
   startup and leads only go to the private log.
 - **Confirm the facts.** The homepage and landing pages say "seven offices" and list Cockermouth (confirmed as

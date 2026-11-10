@@ -1,0 +1,35 @@
+# Render Blueprint: one Node web service that serves the site, the viewing API, lead email,
+# SEO routes and the 30-minute property feed refresh. See README, "Hosting".
+services:
+  - type: web
+    name: mypropertybox-site
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: echo "No build step"
+    startCommand: node server/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # Leads, booking holds and the postcode cache live here so they survive redeploys
+    disk:
+      name: mpb-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATA_DIR
+        value: /var/data
+      - key: GEOCACHE_FILE
+        value: /var/data/geocache.json
+      - key: FEED_REFRESH_MINUTES
+        value: "30"
+      # Sample viewing diaries and no lead email. Delete this variable (and add the SMTP_* settings)
+      # when the site is ready to take real enquiries.
+      - key: DIARY_MODE
+        value: demo
+      # Hidden from search engines until ALLOW_INDEXING=1 and SITE_URL are added at launch

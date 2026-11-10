@@ -69,13 +69,13 @@ function New-SitePackage([string]$Root, [string]$Zip, [bool]$NoIndex) {
   try {
     $files = New-Object System.Collections.Generic.List[string]
     Get-ChildItem -Path $Root -File | Where-Object { $_.Extension -in '.html', '.css', '.js' } | ForEach-Object { $files.Add($_.FullName) }
-    foreach ($dir in 'assets', 'data', 'vendor', 'server') {
+    foreach ($dir in 'assets', 'data', 'vendor', 'server', 'feed') {
       $p = Join-Path $Root $dir
       if (-not (Test-Path $p)) { continue }
       Get-ChildItem -Path $p -Recurse -File | ForEach-Object {
         $rel = $_.FullName.Substring($Root.Length).TrimStart('\', '/')
         # Keep tests, local runtime data and secrets out of the package
-        if ($rel -match '^server[\\/](test|data)[\\/]' -or $_.Name -like '.env*') { return }
+        if ($rel -match '^(server|feed)[\\/]test[\\/]' -or $rel -match '^server[\\/]data[\\/]' -or $_.Name -like '.env*') { return }
         $files.Add($_.FullName)
       }
     }
@@ -135,6 +135,7 @@ $settings = @(
   'TRUST_PROXY=1',
   'DATA_DIR=/home/mpb-data',
   'GEOCACHE_FILE=/home/mpb-data/geocache.json',
+  'FEED_REFRESH_MINUTES=30',
   'SCM_DO_BUILD_DURING_DEPLOYMENT=false'
 )
 if ($DiaryMode -eq 'demo') { $settings += 'DIARY_MODE=demo' }
@@ -167,7 +168,7 @@ Write-Host 'Next steps:'
 Write-Host '  - Forms run in preview mode (nothing is sent) until LEAD.endpoint is set in common.js, then redeploy.'
 Write-Host '  - Add CRM secrets as app settings, never in code, for example:'
 Write-Host "      az webapp config appsettings set -n $AppName -g $ResourceGroup --settings VECO_CLIENT_ID=... VECO_CLIENT_SECRET=... VECO_RESOURCE_IDS=..."
-Write-Host '  - The property feed is the snapshot in data/. Redeploy to refresh it (see README, "Azure").'
+Write-Host '  - The property feed refreshes itself every 30 minutes from inside the server (FEED_REFRESH_MINUTES).'
 if ($Index) {
   Write-Host "  - Live: bind the domain (az webapp config hostname add / az webapp config ssl create) so $SiteUrl reaches this app,"
   Write-Host '    then submit the sitemap in Google Search Console. See the README, "Going live".'

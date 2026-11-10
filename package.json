@@ -1,0 +1,13 @@
+{
+  "name": "mypropertybox-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "My Property Box website: static pages plus a small Node server for the viewing diary, lead email, SEO routes and feed refresh. No dependencies.",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server/server.js",
+    "build": "node tools/build-pages.js",
+    "sync": "node feed/sync.js",
+    "seo": "node tools/seo-check.js"
+  }
+}

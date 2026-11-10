@@ -21,6 +21,7 @@ const { adapterFor, isDemo } = require('./diary');
 const { sendLeadEmail, viewingRecord, officeId, isAddress, config: mailConfig } = require('./mail');
 const seo = require('./seo');
 const { legacyRedirect } = require('./redirects');
+const { startFeedRefresh } = require('./refresh');
 
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -422,6 +423,8 @@ if (require.main === module) {
     console.log(`My Property Box site on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}  (diary: ${isDemo() ? 'DEMO data' : 'live adapters only'})`);
     if (isDemo()) console.warn('WARNING: DIARY_MODE=demo. Leads are only written to the private log (never emailed) and viewing slots are sample data. Remove DIARY_MODE before going live.');
     else if (!mailConfig() && !process.env.LEAD_WEBHOOK_URL) console.warn('WARNING: no lead delivery is configured (SMTP_HOST, MAIL_FROM and LEAD_EMAIL_TO, or LEAD_WEBHOOK_URL). Leads are only written to the private log.');
+    const feed = startFeedRefresh({ minutes: process.env.FEED_REFRESH_MINUTES });
+    if (feed) console.log(`Property feed refreshes every ${feed.every / 60000} minutes`);
   });
 }
 
