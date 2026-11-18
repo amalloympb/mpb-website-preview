@@ -32,4 +32,7 @@ services:
       # when the site is ready to take real enquiries.
       - key: DIARY_MODE
         value: demo
-      # Hidden from search engines until ALLOW_INDEXING=1 and SITE_URL are added at launch
+      # Hidden from search engines until ALLOW_INDEXING=1 and SITE_URL are added at launch.
+      # Also add at launch, in the Environment tab (deliberately not set here, so a test deploy
+      # never tracks visitors): GTM_ID=GTM-53J2272, PAYMENT_URL=<hosted card-payment page> and
+      # FEED_SOURCE_URL=https://old.mypropertybox.co.uk (see README, "Go-live settings").

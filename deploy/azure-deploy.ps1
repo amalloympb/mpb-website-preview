@@ -26,6 +26,9 @@
   ./deploy/azure-deploy.ps1 -AppName mpb-live -Sku B1 -DiaryMode live -Index    # go live on https://www.mypropertybox.co.uk
 
 .EXAMPLE
+  ./deploy/azure-deploy.ps1 -AppName mpb-live -DiaryMode live -Index -GtmId GTM-53J2272 -PaymentUrl https://pay.example.com/mpb -FeedSourceUrl https://old.mypropertybox.co.uk
+
+.EXAMPLE
   ./deploy/azure-deploy.ps1 -AppName mpb-preview-abc -PackageOnly    # build the zip, touch nothing in Azure
 #>
 [CmdletBinding()]
@@ -42,6 +45,12 @@ param(
   [switch]$Index,                         # go live: indexable pages, sitemap, canonical-host redirect to -SiteUrl
   [ValidatePattern('^https://[a-z0-9.-]+$')]
   [string]$SiteUrl = 'https://www.mypropertybox.co.uk',   # the public address, no trailing slash; used with -Index
+  [ValidatePattern('^GTM-[A-Z0-9]{4,12}$')]
+  [string]$GtmId,                         # Google Tag Manager container (GTM-53J2272). Switches on the cookie banner too
+  [ValidatePattern('^https://\S+$')]
+  [string]$PaymentUrl,                    # hosted card-payment page for "Pay by card"
+  [ValidatePattern('^https://[a-z0-9.-]+(:\d+)?$')]
+  [string]$FeedSourceUrl,                 # where the listings feed reads the old website, e.g. https://old.mypropertybox.co.uk
   [switch]$PackageOnly,                   # build the zip and stop
   [switch]$Yes                            # skip the confirmation prompt
 )
@@ -121,6 +130,12 @@ if ($Index) {
 } else {
   Write-Host 'Indexing     : off (hidden preview)'
 }
+if ($GtmId) {
+  Write-Host "Tag Manager  : $GtmId (cookie banner on)"
+  if (-not $Index) { Write-Warning 'GTM is on for a site that is not live: test visits will be sent to the real analytics property.' }
+}
+if ($PaymentUrl) { Write-Host "Card payments: $PaymentUrl" }
+if ($FeedSourceUrl) { Write-Host "Feed source  : $FeedSourceUrl" }
 if ($Sku -eq 'F1') { Write-Host 'Note: F1 is free but sleeps when idle, so the first visit after a quiet spell is slow.' }
 if (-not $Yes) {
   if ((Read-Host 'Create these resources and deploy? (y/N)') -notmatch '^[yY]') { Write-Host 'Cancelled. Nothing was created.'; return }
@@ -140,9 +155,18 @@ $settings = @(
 )
 if ($DiaryMode -eq 'demo') { $settings += 'DIARY_MODE=demo' }
 if ($Index) { $settings += 'ALLOW_INDEXING=1'; $settings += "SITE_URL=$SiteUrl" }
+if ($GtmId) { $settings += "GTM_ID=$GtmId" }
+if ($PaymentUrl) { $settings += "PAYMENT_URL=$PaymentUrl" }
+if ($FeedSourceUrl) { $settings += "FEED_SOURCE_URL=$FeedSourceUrl" }
 Invoke-Az webapp config appsettings set --name $AppName --resource-group $ResourceGroup --settings @settings --output none
 if ($DiaryMode -eq 'live') { Invoke-Az webapp config appsettings delete --name $AppName --resource-group $ResourceGroup --setting-names DIARY_MODE --output none }
 if (-not $Index) { Invoke-Az webapp config appsettings delete --name $AppName --resource-group $ResourceGroup --setting-names ALLOW_INDEXING SITE_URL --output none }
+# The parameters describe the whole go-live state, so leaving one out on a re-run removes it (a preview never keeps tracking on).
+$unset = @()
+if (-not $GtmId) { $unset += 'GTM_ID' }
+if (-not $PaymentUrl) { $unset += 'PAYMENT_URL' }
+if (-not $FeedSourceUrl) { $unset += 'FEED_SOURCE_URL' }
+if ($unset) { Invoke-Az webapp config appsettings delete --name $AppName --resource-group $ResourceGroup --setting-names @unset --output none }
 
 Invoke-Az webapp update --name $AppName --resource-group $ResourceGroup --https-only true --output none
 Invoke-Az webapp config set --name $AppName --resource-group $ResourceGroup --startup-file 'node server/server.js' --min-tls-version 1.2 --ftps-state Disabled --http20-enabled true --output none

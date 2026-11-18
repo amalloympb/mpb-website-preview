@@ -22,6 +22,7 @@ const { sendLeadEmail, viewingRecord, officeId, isAddress, config: mailConfig } 
 const seo = require('./seo');
 const { legacyRedirect } = require('./redirects');
 const { startFeedRefresh } = require('./refresh');
+const { configScript, goLiveWarnings } = require('./siteconfig');
 
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -405,6 +406,7 @@ function createServer() {
       }
       if (get) {
         if (url.pathname === '/robots.txt') return await textRoute(req, res, TYPES['.txt'], seo.robotsTxt({ allow: seo.indexingAllowed() }));
+        if (url.pathname === '/site-config.js') return await textRoute(req, res, TYPES['.js'], configScript());
         if (url.pathname === '/sitemap.xml') return await sitemap(req, res);
         if (url.pathname === '/property.html') return await propertyPage(req, res, url);
         if (await legacy(req, res, url)) return;
@@ -423,6 +425,7 @@ if (require.main === module) {
     console.log(`My Property Box site on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}  (diary: ${isDemo() ? 'DEMO data' : 'live adapters only'})`);
     if (isDemo()) console.warn('WARNING: DIARY_MODE=demo. Leads are only written to the private log (never emailed) and viewing slots are sample data. Remove DIARY_MODE before going live.');
     else if (!mailConfig() && !process.env.LEAD_WEBHOOK_URL) console.warn('WARNING: no lead delivery is configured (SMTP_HOST, MAIL_FROM and LEAD_EMAIL_TO, or LEAD_WEBHOOK_URL). Leads are only written to the private log.');
+    goLiveWarnings().forEach(w => console.warn('WARNING: ' + w));
     const feed = startFeedRefresh({ minutes: process.env.FEED_REFRESH_MINUTES });
     if (feed) console.log(`Property feed refreshes every ${feed.every / 60000} minutes`);
   });

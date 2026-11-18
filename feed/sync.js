@@ -11,7 +11,8 @@
   every 30 minutes; see README):
 
       node feed/sync.js                            # default: site + rightmove, details cached in feed/cache.json
-      node feed/sync.js --adapter=site             # only the live mypropertybox.co.uk site, which already merges the CRMs
+      node feed/sync.js --adapter=site             # only the old mypropertybox.co.uk site, which already merges the CRMs
+                                                   # (FEED_SOURCE_URL=https://old.example reads it from another address)
       node feed/sync.js --adapter=site,rightmove   # explicit list
 
   "rightmove" (feed/rightmove.js) reads the public Rightmove pages of our Cumbria branches (Carlisle, Penrith) until those
@@ -37,7 +38,17 @@ const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'data');
 const DETAIL_DIR = path.join(OUT, 'p');
 const CACHE = path.join(__dirname, 'cache.json');
-const BASE = 'https://www.mypropertybox.co.uk';
+// The "site" adapter reads the old (Ina4) website's result pages. Once www.mypropertybox.co.uk points at this site, set
+// FEED_SOURCE_URL to wherever the old site is still reachable (for example https://old.mypropertybox.co.uk) until the
+// listings come straight from the CRM. Published listing links always use the public address, which the server redirects.
+const PUBLIC_SITE = 'https://www.mypropertybox.co.uk';
+function sourceBase(raw = process.env.FEED_SOURCE_URL) {
+  if (!raw || !String(raw).trim()) return PUBLIC_SITE;
+  let u;
+  try { u = new URL(String(raw).trim()); } catch (e) { u = null; }
+  if (!u || !/^https?:$/.test(u.protocol)) throw new Error(`FEED_SOURCE_URL must be a web address such as https://old.mypropertybox.co.uk (got "${raw}")`);
+  return u.origin;
+}
 const SECTIONS = ['sales', 'lets', 'students'];
 const UA = 'MyPropertyBox-FeedSync/1.0 (own-site data sync)';
 const DETAIL_V = 6; // bump when the Detail shape or its cleaning changes so cached details are refetched
@@ -196,8 +207,17 @@ function parseCards(html, section) {
   }).filter(Boolean);
 }
 
-async function siteSection(section) {
+// If the source has been switched to this site (or is down behind a placeholder page) the parser would find nothing and
+// publish an empty feed, so stop instead and keep the last good one.
+function assertOldSitePage(html, base) {
+  if (!/results-(?:gallery|map)\.php/.test(html)) throw new Error(`${base} does not look like the old website's property results. If www.mypropertybox.co.uk now points at this site, set FEED_SOURCE_URL to the old site's address; nothing was published`);
+}
+
+const detailUrl = (base, l) => `${base}/property-details.php?section=${l.section}&id=${encodeURIComponent(l.id)}`;
+
+async function siteSection(section, BASE = sourceBase()) {
   const first = await get(`${BASE}/results-gallery.php?section=${section}&ddm_order=2&page=1`);
+  assertOldSitePage(first, BASE);
   const total = +(first.match(/<p>\s*(\d+)\s+properties found/) || [])[1] || 0;
   const pages = Math.max(1, ...[...first.matchAll(/[?&;]page=(\d+)/g)].map(m => +m[1]));
   const rest = await pool(Array.from({ length: pages - 1 }, (_, i) => i + 2), 4, p => get(`${BASE}/results-gallery.php?section=${section}&ddm_order=2&page=${p}`));
@@ -218,7 +238,7 @@ async function siteSection(section) {
     const [lat, lng] = coords.get(c.id) || [null, null];
     const hub = nearestHub(lat, lng);
     const status = c.badge === 'sstc' ? 'sstc' : c.badge === 'let-agreed' ? 'let-agreed' : c.badge === 'sold' ? 'sold' : c.badge === 'let' ? 'let' : 'available';
-    return { id: c.id, source: sourceOf(c.photo), section, url: `${BASE}/property-details.php?section=${section}&id=${encodeURIComponent(c.id)}`, ...a, town: a.town || hub, hub, lat, lng, ...parsePrice(c.price, section), ...parseType(c.bed), status, rank, photo: c.photo, photo_count: c.photo ? 1 : 0 };
+    return { id: c.id, source: sourceOf(c.photo), section, url: detailUrl(PUBLIC_SITE, { section, id: c.id }), ...a, town: a.town || hub, hub, lat, lng, ...parsePrice(c.price, section), ...parseType(c.bed), status, rank, photo: c.photo, photo_count: c.photo ? 1 : 0 };
   });
 }
 
@@ -305,10 +325,12 @@ function parseDetail(html, l) {
 
 const ADAPTERS = {
   async site() {
+    const base = sourceBase();
+    if (base !== PUBLIC_SITE) console.log(`Reading the old website from ${base}`);
     const lists = [];
-    for (const s of SECTIONS) lists.push(await siteSection(s));
+    for (const s of SECTIONS) lists.push(await siteSection(s, base));
     const list = mergeStudents(lists.flat());
-    const detail = async l => parseDetail(await get(l.url), l);
+    const detail = async l => parseDetail(await get(detailUrl(base, l)), l);
     return { list, detail };
   },
   async rightmove({ prev }) {
@@ -353,7 +375,7 @@ function readPrevious() {
 }
 
 const helpers = { UA, sleep, pool, decode, text, tidy, parseAddress, parsePrice, parseType, categoryOf, nearestHub, canonTour, TOUR_HOSTS, EPC_HOSTS };
-module.exports = { ...helpers, mergeSources, mergeStudents, inferType };
+module.exports = { ...helpers, mergeSources, mergeStudents, inferType, sourceBase, assertOldSitePage, detailUrl, ADAPTERS };
 
 // ---------- main ----------
 async function main() {

@@ -49,8 +49,12 @@ const attribution = (() => {
   return a;
 })();
 
-// dataLayer events are ready for Google Tag Manager (not loaded on this page)
+// dataLayer events for Google Tag Manager. consent.js loads the container only when GTM_ID is set and the visitor allows it.
 const track = (event, data = {}) => { (window.dataLayer = window.dataLayer || []).push({ event, ...data }); };
+
+// A hosted card-payment page (PAYMENT_URL on the server) replaces the default "Pay by card" link.
+const payUrl = (window.MPB_CONFIG || {}).paymentUrl;
+if (/^https:\/\//.test(payUrl || '')) $$('[data-pay-link]').forEach(a => { a.href = payUrl; });
 
 let noLeadApi = location.protocol === 'file:';
 const sendLead = async (type, data) => {

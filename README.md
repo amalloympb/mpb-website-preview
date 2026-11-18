@@ -94,7 +94,7 @@ The property page can offer real viewing times based on the negotiators' diaries
   Add a source by creating `server/diary/<name>.js` that exports `{ name, configured(), getBusy({ fresh }) }`
   (`getBusy` resolves to the negotiators and their events, as in `mock.js` / `veco.js`), and choosing it in
   `server/diary/index.js`.
-- **Tests:** `node --test --test-concurrency=1 server/test/engine.test.js server/test/api.test.js server/test/veco.test.js server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js server/test/seo.test.js server/test/redirects.test.js server/test/refresh.test.js feed/test/rightmove.test.js`
+- **Tests:** `node --test --test-concurrency=1 server/test/engine.test.js server/test/api.test.js server/test/veco.test.js server/test/mail.test.js server/test/leads.test.js server/test/leads-cap.test.js server/test/seo.test.js server/test/redirects.test.js server/test/refresh.test.js server/test/siteconfig.test.js feed/test/rightmove.test.js feed/test/sync-source.test.js`
 - **Deploying:** run behind HTTPS with `HOST=0.0.0.0` and `TRUST_PROXY=1`. Keep `server/.env` and `server/data/`
   private (they are in `.gitignore`, and the server refuses to serve `server/`, `feed/` and dotfiles).
 - Unverified until tested on real Veco data: recurrence numbering, time zone handling of repeating events and
@@ -179,7 +179,9 @@ az login
 - App settings it sets: `HOST=0.0.0.0`, `TRUST_PROXY=1`, `FEED_REFRESH_MINUTES=30`, `DIARY_MODE=demo`
   (`-DiaryMode live` omits it) and `DATA_DIR` / `GEOCACHE_FILE` under `/home/mpb-data`, which survives redeploys. With
   `-Index` it also sets `ALLOW_INDEXING=1` and `SITE_URL` (`-SiteUrl`, default `https://www.mypropertybox.co.uk`);
-  without it those two are removed, so re-running without `-Index` puts the site back into hidden-preview mode. HTTPS
+  without it those two are removed, so re-running without `-Index` puts the site back into hidden-preview mode. The
+  optional `-GtmId GTM-53J2272`, `-PaymentUrl` and `-FeedSourceUrl` set `GTM_ID`, `PAYMENT_URL` and `FEED_SOURCE_URL`
+  (see "Go-live settings") and are likewise removed when a re-run leaves them out. HTTPS
   only, TLS 1.2, FTPS off.
 - Add CRM secrets afterwards as app settings, never in code:
   `az webapp config appsettings set -n <app> -g rg-mpb-preview --settings VECO_CLIENT_ID=... VECO_CLIENT_SECRET=... VECO_RESOURCE_IDS=...`
@@ -253,11 +255,37 @@ uniqueness, canonical, Open Graph, JSON-LD parses, one `h1`, image `alt` text, b
 back to the old domain, orphan pages) and must report 0 problems. Warnings are advisory (mainly images without
 `width`/`height`). It also runs as part of `server/test/seo.test.js`.
 
+**Go-live settings.** These are environment variables on the Node host (Render **Environment** tab, or Azure app
+settings). None are in the blueprint or the Azure script by default, so every test deployment stays hidden, measures
+nothing and sets no cookies.
+
+| Variable | Live value | What it does |
+|---|---|---|
+| `ALLOW_INDEXING` / `SITE_URL` | `1` / `https://www.mypropertybox.co.uk` | Turns on search indexing, `robots.txt`, the sitemap and the canonical-host redirect |
+| `GTM_ID` | `GTM-53J2272` | Loads Google Tag Manager on every page and shows the cookie banner. Unset = no tracking and no banner. Anything that is not a `GTM-XXXX` id is ignored |
+| `PAYMENT_URL` | the hosted card-payment page (Handepay) | Points "Pay by card" on `payments.html` at it. Must be `https`. Unset = the old site's `payment.php` |
+| `FEED_SOURCE_URL` | `https://old.mypropertybox.co.uk` | Where the listings feed reads the old website from. Needed after the domain switch, or the feed reads this site and goes blank. The sync refuses to publish if the address is not the old site |
+
+The server prints a warning at start-up when `ALLOW_INDEXING` is on and `GTM_ID` or `PAYMENT_URL` is missing, or the
+feed would read the live domain itself. The browser reads these through `/site-config.js`, which the server builds from
+the variables (the static copy used by GitHub Pages leaves everything off).
+
+**Google Tag Manager and cookies.** `consent.js` implements Google Consent Mode v2. Before anything loads, analytics
+and advertising storage are denied; the container is requested, but Google's tags stay quiet until the visitor accepts.
+The banner offers Accept all, Reject all (equal weight) and Choose (analytics and advertising). The choice is kept in
+`localStorage` (`mpb-consent`) for twelve months, and a "Cookie settings" link in the footer and on the cookies page
+reopens it. Events already in the site's `dataLayer` (`mpb_lead_submit`, `mpb_call_click`, `mpb_search`,
+`mpb_viewing_request`, `mpb_enquiry_submit` and others, all prefixed `mpb_`) reach GTM, plus an `mpb_consent` event
+when the visitor chooses. Build the GA4 tag and conversions on those in GTM and test them in **Preview mode** before
+publishing. Do not load the live container from the test site: it would send test hits to the real GA4 property.
+The cookies policy text was rewritten to match this; it needs a legal read before launch.
+
 **Cut-over checklist.** Do these in order:
 
 1. Deploy to the Node host in hidden-preview mode and review it on its own address.
-2. Decide where `payment.php` lives. The card form on `payments.html` is still on the old site. Either keep the old site
-   running on another hostname (for example `old.mypropertybox.co.uk`) and rebuild the pages with
+2. Decide where `payment.php` lives. The card form on `payments.html` is still on the old site. Set `PAYMENT_URL` to the
+   hosted payment page, or keep the old site running on another hostname (for example `old.mypropertybox.co.uk`) and
+   rebuild the pages with
    `PAYMENT_URL=https://old.mypropertybox.co.uk/payment.php node tools/build-pages.js`, or replace it. The audit warns
    while the link still points at the live domain, because that address will be this site after the switch.
 3. Bind the custom domain and a TLS certificate to the app, and point DNS at it (`www` as a CNAME to the host, and the
